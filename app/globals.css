@@ -1,0 +1,94 @@
+@import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+
+/* ── Tailwind v4 Theme Configuration ──────────────────────── */
+@theme {
+  /* Colors */
+  --color-bg: #faf7f2;
+  --color-surface: #f2ebdc;
+  --color-border: #e5ddd0;
+  
+  --color-ink-primary: #2e1e12;
+  --color-ink-secondary: #6e5c50;
+  
+  --color-accent: #e07a28;
+  --color-accent-hover: #c96a1f;
+  
+  --color-green-bg: #eaf5ec;
+  --color-green-border: #c6e6ca;
+  --color-green-text: #1e7234;
+  
+  /* Typography */
+  --font-family-serif: "Playfair Display", Georgia, serif;
+  --font-family-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  
+  /* Spacing - extends default Tailwind scale */
+  --spacing-0_5: 2px;
+  --spacing-1_5: 6px;
+  --spacing-2_5: 10px;
+  --spacing-3_5: 14px;
+  --spacing-13: 52px;
+  --spacing-15: 60px;
+  --spacing-17: 68px;
+  --spacing-26: 104px;
+}
+
+/* Custom utilities */
+@layer utilities {
+  .font-serif {
+    font-family: var(--font-family-serif);
+  }
+  
+  .font-sans {
+    font-family: var(--font-family-sans);
+  }
+}
+
+/* ── Base reset ─────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-family-sans);
+  background-color: var(--color-bg);
+  color: var(--color-ink-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100dvh;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font: inherit;
+  padding: 0;
+  margin: 0;
+}
+
+/* Accessibility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
