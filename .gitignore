@@ -45,3 +45,9 @@ lerna-debug.log*
 
 # Vercel
 .vercel
+
+# Android Keystore & Secrets
+*.jks
+*.keystore
+android/key.properties
+

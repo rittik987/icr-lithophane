@@ -15,7 +15,7 @@ export const ASSETS = {
     "https://www.figma.com/api/mcp/asset/62b51e9e-3bdb-49ee-84ee-ed7a5369149c.png",
 
   // Brand
-  logo: "https://www.figma.com/api/mcp/asset/ae67094e-d5de-4977-a3c4-09360c6a5350.png",
+  logo: "/logo.png",
 
   // Icons (SVG)
   iconVideo:      "https://www.figma.com/api/mcp/asset/a8f191dc-acff-4299-8493-ebb4a494ed28.svg",

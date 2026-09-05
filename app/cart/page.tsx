@@ -74,13 +74,13 @@ export default function CartPage() {
             <span>Back</span>
           </button>
 
-          <Link href="/" className="relative w-16 h-8 shrink-0">
+          <Link href="/" className="relative w-10 h-10 shrink-0">
             <Image
               src={ASSETS.logo}
               alt="ICR Custom Creations"
               fill
               className="object-contain"
-              unoptimized
+              priority
             />
           </Link>
 

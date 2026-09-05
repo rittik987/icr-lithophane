@@ -14,11 +14,11 @@ export default function HomePage() {
   return (
     <>
       {/* ── Fixed chrome ──────────────────────────────────────── */}
-      <AnnouncementBanner />
+      {/* <AnnouncementBanner /> */}
       <Header cartCount={0} />
 
       {/* ── Scrollable page body ─────────────────────────────── */}
-      <main className="bg-[#faf7f2] min-h-screen pt-24 pb-20 lg:pb-0">
+      <main className="bg-[#faf7f2] min-h-screen pt-16 pb-20 lg:pb-0">
 
         {/* ── Page content width constraint ─────────────────── */}
         <div className="max-w-[1280px] mx-auto">
@@ -38,7 +38,7 @@ export default function HomePage() {
             <div className="hidden lg:grid lg:grid-cols-[55fr_45fr] lg:gap-12 lg:items-start">
 
               {/* LEFT — Media gallery with thumbnail strip */}
-              <div className="sticky top-24">
+              <div className="sticky top-18">
                 <MediaGalleryDesktop />
               </div>
 

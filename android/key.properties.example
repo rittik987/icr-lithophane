@@ -1,0 +1,6 @@
+# Example keystore configuration file
+# Store this file as android/key.properties
+storeFile=release-key.jks
+storePassword=your_store_password
+keyAlias=your_key_alias
+keyPassword=your_key_password

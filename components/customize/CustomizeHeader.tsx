@@ -42,18 +42,14 @@ export default function CustomizeHeader() {
         <Link
           href="/cart"
           aria-label={`View cart, ${totalCount} items`}
-          className="flex items-center gap-1.5 bg-[#f2ebdc] border border-[#e5ddd0] rounded-full px-3 py-1.5 hover:bg-[#e8dece] transition-colors"
+          className="flex items-center gap-1.5 bg-[#e07a28] hover:bg-[#c96a1f] text-white rounded-full px-3.5 py-1.5 shadow-xs transition-all active:scale-[0.97] group"
         >
-          <div className="relative w-3 h-[15px] shrink-0">
-            <Image
-              src={ASSETS.iconCartNav}
-              alt=""
-              fill
-              className="object-contain"
-              unoptimized
-            />
-          </div>
-          <span className="text-[#2e1e12] text-xs font-semibold tracking-wider uppercase font-sans">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 group-hover:scale-105 transition-transform">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <path d="M16 10a4 4 0 0 1-8 0" />
+          </svg>
+          <span className="text-white text-xs font-bold tracking-wider uppercase font-sans">
             BAG ({totalCount})
           </span>
         </Link>

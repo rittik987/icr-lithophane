@@ -1,6 +1,15 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ToastProvider } from "@/context/ToastContext";
+import CapacitorInit from "@/components/CapacitorInit";
+
+export const viewport: Viewport = {
+  themeColor: "#faf7f2",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   title: "ICR Custom Creations — Personalised Lithophane Lamps",
@@ -22,8 +31,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider>
+          <CapacitorInit />
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );
 }
+

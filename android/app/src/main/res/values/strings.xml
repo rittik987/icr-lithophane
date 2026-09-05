@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ICR Custom Creations</string>
+    <string name="title_activity_main">ICR Custom Creations</string>
+    <string name="package_name">com.icrcustomcreations.app</string>
+    <string name="custom_url_scheme">com.icrcustomcreations.app</string>
+</resources>

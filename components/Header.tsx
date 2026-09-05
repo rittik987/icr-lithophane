@@ -26,9 +26,9 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
   return (
     <>
       {/* ── Fixed Header ─────────────────────────────────── */}
-      <header className="fixed top-8 left-0 right-0 z-40 backdrop-blur-md bg-[rgba(250,247,242,0.95)] border-b border-[#e5ddd0]">
+      <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md bg-[rgba(250,247,242,0.95)] border-b border-[#e5ddd0]">
         {/* ── Mobile header inner (default) ── Desktop header inner (lg+) ── */}
-        <div className="max-w-[1280px] mx-auto px-4 lg:px-8 h-16 flex items-center">
+        <div className="max-w-[1280px] mx-auto px-4 lg:px-8 h-14 flex items-center">
 
           {/* Hamburger — mobile only */}
           <button
@@ -36,22 +36,24 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
             aria-expanded={sidebarOpen}
             aria-controls="sidebar-nav"
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden flex flex-col items-center justify-center w-9 h-9 gap-[5px] rounded-lg hover:bg-[#f2ebdc] transition-colors shrink-0"
+            className="lg:hidden flex items-center justify-center w-9 h-9 rounded-xl bg-[#f2ebdc]/70 hover:bg-[#e8dece] border border-[#e5ddd0] text-[#2e1e12] transition-all active:scale-[0.95] shrink-0"
           >
-            <span className="block w-5 h-[1.5px] bg-[#2e1e12] rounded-full" />
-            <span className="block w-4 h-[1.5px] bg-[#2e1e12] rounded-full self-start" />
-            <span className="block w-5 h-[1.5px] bg-[#2e1e12] rounded-full" />
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
           </button>
 
           {/* Logo — centred on mobile, left on desktop */}
           <div className="flex-1 flex lg:flex-none justify-center lg:justify-start">
-            <Link href="/" className="relative w-16 h-8 shrink-0 block">
+            <Link href="/" className="relative w-24 h-24 sm:w-12 sm:h-12 shrink-0 block">
               <Image
                 src={ASSETS.logo}
                 alt="ICR Custom Creations"
                 fill
                 className="object-contain object-center lg:object-left"
-                unoptimized
+                priority
               />
             </Link>
           </div>
@@ -69,23 +71,19 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
             ))}
           </nav>
 
-          {/* Cart button — always right */}
+          {/* Cart button — always right with primary CTA color */}
           <div className="flex-none ml-auto lg:ml-0">
             <Link
               href="/cart"
               aria-label={`View cart, ${cartCount} items`}
-              className="flex items-center gap-1.5 bg-[#f2ebdc] border border-[#e5ddd0] rounded-full px-3 py-1.5 hover:bg-[#e8dece] transition-colors"
+              className="flex items-center gap-1.5 bg-[#e07a28] hover:bg-[#c96a1f] text-white rounded-full px-3.5 py-1.5 shadow-xs transition-all active:scale-[0.97] group"
             >
-              <div className="relative w-3 h-[15px] shrink-0">
-                <Image
-                  src={ASSETS.iconCartNav}
-                  alt=""
-                  fill
-                  className="object-contain"
-                  unoptimized
-                />
-              </div>
-              <span className="text-[#2e1e12] text-xs font-semibold tracking-wider uppercase font-sans">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 group-hover:scale-105 transition-transform">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <path d="M16 10a4 4 0 0 1-8 0" />
+              </svg>
+              <span className="text-white text-xs font-bold tracking-wider uppercase font-sans">
                 BAG ({cartCount})
               </span>
             </Link>
@@ -109,18 +107,18 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
         style={{ transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)" }}
       >
         {/* Sidebar Top Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#e5ddd0] bg-[#f2ebdc]/80 backdrop-blur-sm">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-[#e5ddd0] bg-[#f2ebdc]/80 backdrop-blur-sm">
           <Link
             href="/"
             onClick={() => setSidebarOpen(false)}
-            className="relative w-20 h-9 shrink-0 block"
+            className="relative w-12 h-12 shrink-0 block"
           >
             <Image
               src={ASSETS.logo}
               alt="ICR Custom Creations"
               fill
               className="object-contain object-left"
-              unoptimized
+              priority
             />
           </Link>
           <button
