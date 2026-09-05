@@ -4,7 +4,7 @@ import { ToastProvider } from "@/context/ToastContext";
 import CapacitorInit from "@/components/CapacitorInit";
 
 export const viewport: Viewport = {
-  themeColor: "#faf7f2",
+  themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

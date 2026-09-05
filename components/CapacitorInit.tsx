@@ -18,9 +18,9 @@ export default function CapacitorInit() {
         // 1. Configure Status Bar
         const { StatusBar, Style } = await import("@capacitor/status-bar");
         try {
-          // Set icons to dark so they are clearly visible against light background
+          // Set icons to crisp dark so they are clearly visible against pure white background
           await StatusBar.setStyle({ style: Style.Light });
-          await StatusBar.setBackgroundColor({ color: "#FAF7F2" });
+          await StatusBar.setBackgroundColor({ color: "#FFFFFF" });
           await StatusBar.setOverlaysWebView({ overlay: false });
         } catch (e) {
           console.warn("[Capacitor] Status bar configuration warning:", e);
