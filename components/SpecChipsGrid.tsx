@@ -40,7 +40,7 @@ const SPECS: SpecChip[] = [
     iconW: 10,
     iconH: 15,
     label: "POWER & CABLE",
-    value: "USB-C + Inline Dimmer",
+    value: "Power DC adapter",
     altText: "Power icon",
   },
 ];
@@ -48,7 +48,7 @@ const SPECS: SpecChip[] = [
 export default function SpecChipsGrid() {
   return (
     <section className="px-4 py-2 w-full">
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
         {SPECS.map((spec) => (
           <div
             key={spec.label}

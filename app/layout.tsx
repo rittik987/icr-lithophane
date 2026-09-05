@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ToastProvider } from "@/context/ToastContext";
 
 export const metadata: Metadata = {
   title: "ICR Custom Creations — Personalised Lithophane Lamps",
@@ -20,7 +21,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }

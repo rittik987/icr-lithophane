@@ -21,7 +21,7 @@ const STEPS = [
 
 export default function HowItWorks() {
   return (
-    <section className="px-4 py-7 flex flex-col gap-5 w-full">
+    <section id="how-it-works" className="px-4 py-7 lg:py-14 flex flex-col gap-5 w-full">
       {/* Section header */}
       <div className="flex flex-col items-center gap-1 text-center">
         <span
@@ -44,40 +44,47 @@ export default function HowItWorks() {
         </p>
       </div>
 
-      {/* Steps */}
-      <div className="flex flex-col gap-3 w-full">
-        {STEPS.map((step) => (
+      {/* Steps — vertical on mobile, horizontal on desktop */}
+      <div className="flex flex-col lg:flex-row lg:items-start gap-3 lg:gap-0 w-full relative">
+        {STEPS.map((step, index) => (
           <div
             key={step.number}
-            className="bg-[#f2ebdc] border border-[#e5ddd0] rounded-xl p-[17px] flex gap-3.5 items-start"
+            className="relative flex-1"
           >
-            {/* Step number badge */}
-            <div
-              className="bg-[#e07a28] rounded-full w-8 h-8 flex items-center justify-center shrink-0 shadow-[0_1px_1px_rgba(0,0,0,0.05)]"
-              aria-hidden="true"
-            >
-              <span
-                className="text-white text-[14px] font-bold leading-none"
-                style={{ fontFamily: "var(--font-serif)" }}
-              >
-                {step.number}
-              </span>
-            </div>
+            {/* Connecting line between steps on desktop */}
+            {index < STEPS.length - 1 && (
+              <div className="hidden lg:block absolute top-4 left-[calc(50%+32px)] right-[-calc(50%-32px)] h-[1px] bg-gradient-to-r from-[#e5ddd0] to-transparent z-0" />
+            )}
 
-            {/* Content */}
-            <div className="flex flex-col gap-1 pt-[1px]">
-              <h3
-                className="text-[#2e1e12] text-[17px] font-semibold leading-[1.5]"
-                style={{ fontFamily: "var(--font-serif)" }}
+            <div className="bg-[#f2ebdc] border border-[#e5ddd0] rounded-xl p-[17px] lg:p-5 flex lg:flex-col gap-3.5 lg:gap-3 items-start lg:items-center lg:text-center lg:mx-3 relative z-10">
+              {/* Step number badge */}
+              <div
+                className="bg-[#e07a28] rounded-full w-8 h-8 flex items-center justify-center shrink-0 shadow-[0_1px_1px_rgba(0,0,0,0.05)]"
+                aria-hidden="true"
               >
-                {step.title}
-              </h3>
-              <p
-                className="text-[#6e5c50] text-[13px] leading-[1.625]"
-                style={{ fontFamily: "var(--font-sans)" }}
-              >
-                {step.description}
-              </p>
+                <span
+                  className="text-white text-[14px] font-bold leading-none"
+                  style={{ fontFamily: "var(--font-serif)" }}
+                >
+                  {step.number}
+                </span>
+              </div>
+
+              {/* Content */}
+              <div className="flex flex-col gap-1 pt-[1px] lg:pt-0">
+                <h3
+                  className="text-[#2e1e12] text-[17px] font-semibold leading-[1.5]"
+                  style={{ fontFamily: "var(--font-serif)" }}
+                >
+                  {step.title}
+                </h3>
+                <p
+                  className="text-[#6e5c50] text-[13px] leading-[1.625]"
+                  style={{ fontFamily: "var(--font-sans)" }}
+                >
+                  {step.description}
+                </p>
+              </div>
             </div>
           </div>
         ))}
