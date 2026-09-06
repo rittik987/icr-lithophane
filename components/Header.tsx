@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ASSETS } from "@/lib/assets";
 import { useCart } from "@/lib/cart";
+import { useAuth } from "@/context/AuthContext";
 
 interface HeaderProps {
   cartCount?: number;
@@ -21,6 +22,7 @@ const DESKTOP_NAV_LINKS = [
 export default function Header({ cartCount: propCartCount }: HeaderProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { totalCount } = useCart();
+  const { user, logout } = useAuth();
   const cartCount = propCartCount !== undefined ? propCartCount : totalCount;
 
   return (
@@ -28,25 +30,26 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
       {/* ── Fixed Header ─────────────────────────────────── */}
       <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md bg-[rgba(250,247,242,0.95)] border-b border-[#e5ddd0]">
         {/* ── Mobile header inner (default) ── Desktop header inner (lg+) ── */}
-        <div className="max-w-[1280px] mx-auto px-4 lg:px-8 h-14 flex items-center">
+        <div className="max-w-[1280px] mx-auto px-4 lg:px-8 h-16 flex items-center justify-between gap-4">
+          {/* Mobile hamburger + Logo group */}
+          <div className="flex items-center gap-3">
+            {/* Hamburger button */}
+            <button
+              type="button"
+              aria-label="Open site navigation menu"
+              aria-expanded={sidebarOpen}
+              aria-controls="sidebar-nav"
+              onClick={() => setSidebarOpen(true)}
+              className="w-10 h-10 -ml-1 rounded-full flex items-center justify-center text-[#2e1e12] hover:text-[#e07a28] hover:bg-[#f2ebdc] active:bg-[#e8dccb] transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-[#e07a28] focus-visible:outline-offset-2"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
 
-          {/* Hamburger — mobile only */}
-          <button
-            aria-label="Open navigation menu"
-            aria-expanded={sidebarOpen}
-            aria-controls="sidebar-nav"
-            onClick={() => setSidebarOpen(true)}
-            className="lg:hidden flex items-center justify-center w-9 h-9 rounded-xl bg-[#f2ebdc]/70 hover:bg-[#e8dece] border border-[#e5ddd0] text-[#2e1e12] transition-all active:scale-[0.95] shrink-0"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
-
-          {/* Logo — centred on mobile, left on desktop */}
-          <div className="flex-1 flex lg:flex-none justify-center lg:justify-start">
+            {/* Logo */}
             <Link href="/" className="relative w-24 h-24 sm:w-12 sm:h-12 shrink-0 block">
               <Image
                 src={ASSETS.logo}
@@ -71,8 +74,34 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
             ))}
           </nav>
 
-          {/* Cart button — always right with primary CTA color */}
-          <div className="flex-none ml-auto lg:ml-0">
+          {/* Right actions: Account + Bag */}
+          <div className="flex items-center gap-2.5 ml-auto lg:ml-0">
+            {/* Desktop Account Button */}
+            {user ? (
+              <Link
+                href="/account"
+                aria-label="My Account"
+                className="hidden lg:flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-[#2e1e12] hover:text-[#e07a28] rounded-full border border-[#e5ddd0] hover:border-[#e07a28] bg-white transition-all shadow-2xs"
+              >
+                <span className="w-5 h-5 rounded-full bg-[#e07a28] text-white flex items-center justify-center text-[10px] font-bold">
+                  {user.name ? user.name[0].toUpperCase() : "U"}
+                </span>
+                <span className="max-w-[100px] truncate">{user.name.split(" ")[0]}</span>
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="hidden lg:flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-[#2e1e12] hover:text-[#e07a28] rounded-full border border-[#e5ddd0] hover:border-[#e07a28] bg-white transition-all shadow-2xs"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+                <span>Sign In</span>
+              </Link>
+            )}
+
+            {/* Cart button — primary CTA color */}
             <Link
               href="/cart"
               aria-label={`View cart, ${cartCount} items`}
@@ -108,26 +137,33 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
       >
         {/* Sidebar Top Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-[#e5ddd0] bg-[#f2ebdc]/80 backdrop-blur-sm">
-          <Link
-            href="/"
-            onClick={() => setSidebarOpen(false)}
-            className="relative w-12 h-12 shrink-0 block"
-          >
-            <Image
-              src={ASSETS.logo}
-              alt="ICR Custom Creations"
-              fill
-              className="object-contain object-left"
-              priority
-            />
+          <Link href="/" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2.5">
+            <div className="relative w-8 h-8 rounded-lg overflow-hidden shrink-0 border border-[#e5ddd0] bg-white shadow-xs">
+              <Image
+                src={ASSETS.logo}
+                alt="ICR Logo"
+                fill
+                className="object-cover"
+              />
+            </div>
+            <div>
+              <span className="text-[13px] font-bold font-serif text-[#2e1e12] leading-tight block">
+                ICR Custom Creations
+              </span>
+              <span className="text-[10px] text-[#7a6759] font-sans font-medium block">
+                Handcrafted Keepsakes
+              </span>
+            </div>
           </Link>
           <button
-            aria-label="Close navigation menu"
+            type="button"
+            aria-label="Close menu"
             onClick={() => setSidebarOpen(false)}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/70 border border-[#e5ddd0] hover:bg-[#e8dece] transition-colors text-[#2e1e12]"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-[#5c4a3e] hover:text-[#2e1e12] hover:bg-[#eae2d2] active:bg-[#e0d6c4] transition-colors cursor-pointer"
           >
-            <svg width="15" height="15" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-              <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
@@ -140,6 +176,72 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
 
         {/* Navigation list */}
         <div className="flex flex-col py-3 px-3 flex-1 overflow-y-auto">
+          {/* User Account / Auth Section */}
+          <div className="mb-2">
+            {user ? (
+              <div className="p-3.5 rounded-2xl bg-white border border-[#e5ddd0] shadow-xs mb-2">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-xl bg-[#e07a28] text-white flex items-center justify-center text-xs font-bold font-serif shrink-0">
+                      {user.name ? user.name[0].toUpperCase() : "U"}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-[#2e1e12] truncate">{user.name}</div>
+                      <div className="text-[10px] text-[#8c786a] truncate">{user.phone}</div>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#f4ece0] text-[#e07a28]">
+                    {user.role}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 pt-2 border-t border-[#f0e8dc]">
+                  <Link
+                    href="/account"
+                    onClick={() => setSidebarOpen(false)}
+                    className="flex-1 py-1.5 px-3 bg-[#faf7f2] hover:bg-[#f2ebdc] text-[11px] font-bold text-[#2e1e12] rounded-lg text-center transition-colors"
+                  >
+                    View Account
+                  </Link>
+                  <button
+                    onClick={() => {
+                      logout();
+                      setSidebarOpen(false);
+                    }}
+                    className="py-1.5 px-3 text-[11px] font-bold text-[#a92323] hover:bg-[#fdf2f0] rounded-lg transition-colors cursor-pointer"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setSidebarOpen(false)}
+                className="flex items-center justify-between p-3.5 rounded-2xl bg-gradient-to-r from-[#faf7f2] to-[#f4ece0] border border-[#e5ddd0] hover:border-[#e07a28] transition-all text-[#2e1e12] group mb-2"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[#e07a28] text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-[#2e1e12] group-hover:text-[#e07a28] transition-colors">
+                      Sign In / Register
+                    </div>
+                    <div className="text-[10px] text-[#7a6759]">
+                      Save creations & orders
+                    </div>
+                  </div>
+                </div>
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#b5a596] group-hover:text-[#e07a28] transition-colors">
+                  <path d="M7.5 15L12.5 10L7.5 5" />
+                </svg>
+              </Link>
+            )}
+          </div>
+
           {/* Top Primary Group: Order & Account */}
           <div className="space-y-1">
             {/* Order */}
@@ -170,7 +272,7 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
               </svg>
             </Link>
 
-            {/* Account */}
+            {/* Account Link */}
             <Link
               href="/account"
               onClick={() => setSidebarOpen(false)}
@@ -188,7 +290,7 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
                     Account
                   </div>
                   <div className="text-[11px] text-[#7a6759] font-normal">
-                    Profile & saved creations
+                    Profile & delivery addresses
                   </div>
                 </div>
               </div>
@@ -301,4 +403,3 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
     </>
   );
 }
-

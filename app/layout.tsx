@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ToastProvider } from "@/context/ToastContext";
+import { AuthProvider } from "@/context/AuthContext";
 import CapacitorInit from "@/components/CapacitorInit";
 
 export const viewport: Viewport = {
@@ -32,11 +33,12 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <ToastProvider>
-          <CapacitorInit />
-          {children}
+          <AuthProvider>
+            <CapacitorInit />
+            {children}
+          </AuthProvider>
         </ToastProvider>
       </body>
     </html>
   );
 }
-
