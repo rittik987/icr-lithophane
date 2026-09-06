@@ -6,14 +6,16 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCart, CartItem } from "@/lib/cart";
 import { ASSETS } from "@/lib/assets";
+import { couponApi, CouponValidation } from "@/lib/api";
 
 export default function CartPage() {
   const router = useRouter();
   const { items, totalCount, subtotal, isLoaded, updateQty, remove, clear } = useCart();
 
   const [promoInput, setPromoInput] = useState("");
-  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount: number } | null>(null);
+  const [appliedPromo, setAppliedPromo] = useState<CouponValidation | null>(null);
   const [promoError, setPromoError] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
   const [selectedPreviewItem, setSelectedPreviewItem] = useState<CartItem | null>(null);
   const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
 
@@ -21,18 +23,21 @@ export default function CartPage() {
     setExpandedDetails((prev) => ({ ...prev, [id]: !prev[id] }));
   }
 
-  function handleApplyPromo() {
+  async function handleApplyPromo() {
     setPromoError("");
-    const code = promoInput.trim().toUpperCase();
+    const code = promoInput.trim();
     if (!code) return;
 
-    if (code === "WELCOME10") {
-      const discount = Math.round(subtotal * 0.1);
-      setAppliedPromo({ code: "WELCOME10 (10% OFF)", discount });
-    } else if (code === "ICR500") {
-      setAppliedPromo({ code: "ICR500 (₹500 OFF)", discount: 500 });
+    setPromoLoading(true);
+    // subtotal from useCart is in rupees (price * qty), backend expects paise
+    const subtotalPaise = subtotal * 100;
+    const res = await couponApi.validate(code, subtotalPaise);
+    setPromoLoading(false);
+
+    if (res.success && res.data?.coupon) {
+      setAppliedPromo(res.data);
     } else {
-      setPromoError("Invalid coupon code. Try WELCOME10 or ICR500");
+      setPromoError(res.error ?? "Invalid or expired coupon code.");
     }
   }
 
@@ -42,7 +47,8 @@ export default function CartPage() {
     setPromoError("");
   }
 
-  const discountAmount = appliedPromo ? Math.min(appliedPromo.discount, subtotal) : 0;
+  // discountAmount from server is in paise; convert to rupees for display
+  const discountAmount = appliedPromo ? appliedPromo.discountAmount / 100 : 0;
   const finalTotal = Math.max(0, subtotal - discountAmount);
 
   if (!isLoaded) {
@@ -344,7 +350,7 @@ export default function CartPage() {
                     </label>
                     {appliedPromo ? (
                       <div className="flex items-center justify-between bg-[#eaf5ec] border border-[#c6e6ca] rounded-xl px-3 py-2 text-xs text-[#1e7234] font-sans">
-                        <span className="font-semibold">✓ {appliedPromo.code}</span>
+                        <span className="font-semibold">✓ {appliedPromo.coupon.code} — {appliedPromo.coupon.description}</span>
                         <button
                           onClick={handleRemovePromo}
                           className="text-[#6e5c50] hover:text-[#b83a3a] text-xs font-bold ml-2"
@@ -363,9 +369,10 @@ export default function CartPage() {
                         />
                         <button
                           onClick={handleApplyPromo}
-                          className="bg-[#2e1e12] hover:bg-[#443021] text-white text-xs font-bold font-sans px-4 py-2 rounded-xl transition-colors shrink-0"
+                          disabled={promoLoading}
+                          className="bg-[#2e1e12] hover:bg-[#443021] text-white text-xs font-bold font-sans px-4 py-2 rounded-xl transition-colors shrink-0 disabled:opacity-60"
                         >
-                          Apply
+                          {promoLoading ? "..." : "Apply"}
                         </button>
                       </div>
                     )}
@@ -385,7 +392,7 @@ export default function CartPage() {
 
                     {discountAmount > 0 && (
                       <div className="flex justify-between text-[#1e7234]">
-                        <span>Discount ({appliedPromo?.code})</span>
+                        <span>Discount ({appliedPromo?.coupon.code})</span>
                         <span className="font-semibold">-₹{discountAmount.toLocaleString("en-IN")}</span>
                       </div>
                     )}
@@ -415,7 +422,7 @@ export default function CartPage() {
 
                   {/* Checkout CTA */}
                   <button
-                    onClick={() => router.push("/checkout")}
+                    onClick={() => router.push(`/checkout${appliedPromo ? `?coupon=${appliedPromo.coupon.code}` : ""}`)}
                     className="w-full mt-6 bg-[#e07a28] hover:bg-[#c96a1f] text-white font-bold font-sans text-sm uppercase tracking-wider py-4 rounded-xl shadow-[0_4px_14px_rgba(224,122,40,0.35)] transition-all active:scale-[0.98] flex items-center justify-center gap-2 group"
                   >
                     <span>Proceed to Checkout</span>

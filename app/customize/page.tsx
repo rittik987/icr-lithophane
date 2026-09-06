@@ -3,10 +3,10 @@
 import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { TEMPLATES, getDefaultTemplate, getTemplateById } from "@/lib/templates";
 import { buildCartItemPayload, addToCart } from "@/lib/cart";
 import { useToast } from "@/context/ToastContext";
+import { useAuth } from "@/context/AuthContext";
 import CustomizeHeader from "@/components/customize/CustomizeHeader";
 import TemplateSelector from "@/components/customize/TemplateSelector";
 import TemplateBottomSheet from "@/components/customize/TemplateBottomSheet";
@@ -23,13 +23,28 @@ const PreviewModal = dynamic(
 export default function CustomizePage() {
   const router = useRouter();
   const { showToast } = useToast();
-  const defaultTemplate = getDefaultTemplate();
+  const { user, isLoading } = useAuth();
 
-  const [selectedId, setSelectedId] = useState(defaultTemplate.id);
+  // Client guard: redirect to login if unauthenticated
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace("/login?redirect=/customize");
+    }
+  }, [isLoading, user, router]);
+
+  const [selectedId, setSelectedId] = useState<string>(
+    getDefaultTemplate().id
+  );
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
-  const [textValues, setTextValues] = useState<Record<string, string>>({});
   const [previewOpen, setPreviewOpen] = useState(false);
+
+  // uploadedFiles maps slot.id -> File
+  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+
+  // textValues maps field.id -> string
+  const [textValues, setTextValues] = useState<Record<string, string>>({});
+
+  // Loading states
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
@@ -74,6 +89,10 @@ export default function CustomizePage() {
   }
 
   async function handleAddToCart(customPreviewUrl?: string) {
+    if (!user) {
+      router.push("/login?redirect=/customize");
+      return;
+    }
     if (isAddingToCart) return;
     setIsAddingToCart(true);
     try {
@@ -102,6 +121,10 @@ export default function CustomizePage() {
   }
 
   async function handlePlaceOrder(customPreviewUrl?: string) {
+    if (!user) {
+      router.push("/login?redirect=/customize");
+      return;
+    }
     if (isPlacingOrder) return;
     setIsPlacingOrder(true);
     try {
@@ -118,6 +141,19 @@ export default function CustomizePage() {
       alert("Something went wrong preparing your order. Please try again.");
       setIsPlacingOrder(false);
     }
+  }
+
+  if (isLoading || !user) {
+    return (
+      <div className="min-h-screen bg-[#faf7f2] flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="w-10 h-10 border-3 border-[#e07a28] border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-bold text-[#6e5c50] uppercase tracking-wider font-sans">
+            Checking authentication...
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -204,7 +240,7 @@ export default function CustomizePage() {
             <button
               onClick={() => handleAddToCart()}
               disabled={isAddingToCart}
-              className="relative w-full overflow-hidden rounded-xl flex items-center justify-center gap-3 px-5 py-3.5 transition-all duration-200 active:scale-[0.98] border-2 border-[#e07a28] bg-[#fff8f2] text-[#c96a1e] hover:bg-[#fae8d4] font-bold text-[15px] font-sans shadow-sm"
+              className="relative w-full overflow-hidden rounded-xl flex items-center justify-center gap-3 px-5 py-3.5 transition-all duration-200 active:scale-[0.98] border-2 border-[#e07a28] bg-[#fff8f2] text-[#c96a1e] hover:bg-[#fae8d4] font-bold text-[15px] font-sans shadow-sm cursor-pointer"
             >
               {isAddingToCart ? (
                 <div className="flex items-center gap-2">

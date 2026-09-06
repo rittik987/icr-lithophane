@@ -5,8 +5,15 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const authCookie = request.cookies.get("icr_auth")?.value;
 
-  // Protect /account and its sub-paths
-  if (pathname.startsWith("/account")) {
+  // Protected routes: account, orders, cart, checkout, customize
+  const isProtected =
+    pathname.startsWith("/account") ||
+    pathname.startsWith("/orders") ||
+    pathname.startsWith("/cart") ||
+    pathname.startsWith("/checkout") ||
+    pathname.startsWith("/customize");
+
+  if (isProtected) {
     if (!authCookie) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
@@ -23,5 +30,13 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/account/:path*", "/login", "/register"],
+  matcher: [
+    "/account/:path*",
+    "/orders/:path*",
+    "/cart/:path*",
+    "/checkout/:path*",
+    "/customize/:path*",
+    "/login",
+    "/register",
+  ],
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -34,7 +34,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/account";
 
-  const { login } = useAuth();
+  const { user, isLoading, login } = useAuth();
   const { showToast } = useToast();
 
   const [phone, setPhone] = useState("");
@@ -42,6 +42,13 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Auth guard: if already logged in, navigate away immediately (no coming back to login)
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.replace(redirect);
+    }
+  }, [isLoading, user, redirect, router]);
 
   function handlePhoneChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.value.replace(/\D/g, "");
@@ -75,7 +82,8 @@ function LoginForm() {
           message: "Signed in successfully",
           type: "success",
         });
-        router.push(redirect);
+        // Use replace so login is removed from browser history stack
+        router.replace(redirect);
       } else {
         setError(res.error || "Invalid mobile number or password");
       }
@@ -92,6 +100,14 @@ function LoginForm() {
       message: "Configure GOOGLE_CLIENT_ID in backend .env to enable instant Google Sign-In",
       type: "info",
     });
+  }
+
+  if (user) {
+    return (
+      <div className="min-h-screen bg-[#FAF7F2] flex items-center justify-center p-4">
+        <div className="w-8 h-8 border-2 border-[#E07A28] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { User, authApi, userApi } from "@/lib/api";
+import { User, authApi, userApi, handleUnauthorized, clearStoredAuth } from "@/lib/api";
 
 interface AuthContextType {
   user: User | null;
@@ -20,12 +20,6 @@ function setAuthCookie() {
   if (typeof document !== "undefined") {
     // 7 days cookie for proxy.ts server interceptor
     document.cookie = "icr_auth=1; path=/; max-age=604800; SameSite=Lax";
-  }
-}
-
-function clearAuthCookie() {
-  if (typeof document !== "undefined") {
-    document.cookie = "icr_auth=; path=/; max-age=0; SameSite=Lax";
   }
 }
 
@@ -84,9 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Session expired or revoked
           setUser(null);
           setToken(null);
-          localStorage.removeItem("icr_user");
-          localStorage.removeItem("icr_token");
-          clearAuthCookie();
+          handleUnauthorized();
         }
       }
     }
@@ -132,9 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setUser(null);
     setToken(null);
-    localStorage.removeItem("icr_user");
-    localStorage.removeItem("icr_token");
-    clearAuthCookie();
+    clearStoredAuth();
   }, []);
 
   const updateProfile = useCallback(async (data: { name?: string; phone?: string; avatarUrl?: string }) => {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { ASSETS } from "@/lib/assets";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/context/AuthContext";
@@ -20,10 +21,34 @@ const DESKTOP_NAV_LINKS = [
 ];
 
 export default function Header({ cartCount: propCartCount }: HeaderProps) {
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { totalCount } = useCart();
   const { user, logout } = useAuth();
   const cartCount = propCartCount !== undefined ? propCartCount : totalCount;
+
+  function handleBagClick(e: React.MouseEvent) {
+    if (!user) {
+      e.preventDefault();
+      router.push("/login?redirect=/cart");
+    }
+  }
+
+  function handleOrderClick(e: React.MouseEvent) {
+    setSidebarOpen(false);
+    if (!user) {
+      e.preventDefault();
+      router.push("/login?redirect=/orders");
+    }
+  }
+
+  function handleCustomizeClick(e: React.MouseEvent) {
+    setSidebarOpen(false);
+    if (!user) {
+      e.preventDefault();
+      router.push("/login?redirect=/customize");
+    }
+  }
 
   return (
     <>
@@ -67,6 +92,12 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
               <Link
                 key={link.label}
                 href={link.href}
+                onClick={(e) => {
+                  if (link.href === "/orders" && !user) {
+                    e.preventDefault();
+                    router.push("/login?redirect=/orders");
+                  }
+                }}
                 className="px-4 py-2 text-[#2e1e12] text-[13px] font-medium font-sans rounded-lg hover:bg-[#f2ebdc] hover:text-[#e07a28] transition-colors tracking-wide"
               >
                 {link.label}
@@ -101,11 +132,12 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
               </Link>
             )}
 
-            {/* Cart button — primary CTA color */}
+            {/* Cart button — guarded */}
             <Link
               href="/cart"
+              onClick={handleBagClick}
               aria-label={`View cart, ${cartCount} items`}
-              className="flex items-center gap-1.5 bg-[#e07a28] hover:bg-[#c96a1f] text-white rounded-full px-3.5 py-1.5 shadow-xs transition-all active:scale-[0.97] group"
+              className="flex items-center gap-1.5 bg-[#e07a28] hover:bg-[#c96a1f] text-white rounded-full px-3.5 py-1.5 shadow-xs transition-all active:scale-[0.97] group cursor-pointer"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 group-hover:scale-105 transition-transform">
                 <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
@@ -244,10 +276,10 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
 
           {/* Top Primary Group: Order & Account */}
           <div className="space-y-1">
-            {/* Order */}
+            {/* Order — guarded */}
             <Link
               href="/orders"
-              onClick={() => setSidebarOpen(false)}
+              onClick={handleOrderClick}
               className="group flex items-center justify-between p-3 rounded-2xl hover:bg-[#f2ebdc] transition-all text-[#2e1e12]"
             >
               <div className="flex items-center gap-3.5">
@@ -359,7 +391,7 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
             </Link>
           </div>
 
-          {/* Quick Customize Card inside drawer */}
+          {/* Quick Customize Card inside drawer — guarded */}
           <div className="mt-auto pt-4">
             <div className="p-4 rounded-2xl bg-[#f2ebdc] border border-[#e5ddd0] shadow-xs">
               <div className="flex items-center justify-between mb-1">
@@ -375,8 +407,8 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
               </p>
               <Link
                 href="/customize"
-                onClick={() => setSidebarOpen(false)}
-                className="w-full py-2.5 px-4 bg-[#e07a28] hover:bg-[#c96a1f] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-xs active:scale-[0.98]"
+                onClick={handleCustomizeClick}
+                className="w-full py-2.5 px-4 bg-[#e07a28] hover:bg-[#c96a1f] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-xs active:scale-[0.98] cursor-pointer"
               >
                 <span>Customize Now</span>
                 <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
@@ -387,7 +419,7 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
           </div>
         </div>
 
-        {/* Sidebar footer with safe clearance for dev badge & home bar */}
+        {/* Sidebar footer */}
         <div className="px-5 pt-3 pb-8 border-t border-[#e5ddd0] bg-[#f5ede0]/60">
           <div className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-[#6e5c50]">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

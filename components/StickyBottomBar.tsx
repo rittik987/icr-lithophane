@@ -1,10 +1,22 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ASSETS } from "@/lib/assets";
+import { useAuth } from "@/context/AuthContext";
 
 export default function StickyBottomBar() {
+  const router = useRouter();
+  const { user } = useAuth();
+
+  function handleOrderClick() {
+    if (!user) {
+      router.push("/login?redirect=/customize");
+    } else {
+      router.push("/customize");
+    }
+  }
+
   return (
     <aside
       aria-label="Quick order bar"
@@ -27,11 +39,12 @@ export default function StickyBottomBar() {
           </span>
         </div>
 
-        {/* CTA — links to /customize */}
-        <Link
-          href="/customize"
+        {/* CTA — guarded with button click */}
+        <button
+          type="button"
+          onClick={handleOrderClick}
           style={{ backgroundColor: "#e07a28" }}
-          className="hover:bg-[#c96a1f] active:bg-[#b85d1a] flex items-center gap-2 px-5 py-3 rounded-sm shadow-md transition-all shrink-0"
+          className="hover:bg-[#c96a1f] active:bg-[#b85d1a] flex items-center gap-2 px-5 py-3 rounded-sm shadow-md transition-all shrink-0 cursor-pointer"
         >
           <span
             className="font-bold font-sans uppercase whitespace-nowrap"
@@ -49,7 +62,7 @@ export default function StickyBottomBar() {
               unoptimized
             />
           </div>
-        </Link>
+        </button>
       </div>
     </aside>
   );

@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { ASSETS } from "@/lib/assets";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -169,313 +171,374 @@ export default function AccountPage() {
     <div className="min-h-screen bg-[#faf7f2] text-[#2e1e12] flex flex-col pb-16">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md bg-[rgba(250,247,242,0.96)] border-b border-[#e5ddd0]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+          {/* Left: Subtle back link */}
           <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-xs font-bold text-[#6e5c50] hover:text-[#2e1e12] transition-colors"
+            type="button"
+            onClick={() => {
+              if (
+                typeof document !== "undefined" &&
+                (document.referrer.includes("/login") || document.referrer.includes("/register"))
+              ) {
+                router.replace("/");
+              } else if (typeof window !== "undefined" && window.history.length > 2) {
+                router.back();
+              } else {
+                router.replace("/");
+              }
+            }}
+            className="flex items-center gap-1.5 text-xs font-medium text-[#6e5c50] hover:text-[#2e1e12] transition-colors cursor-pointer group py-1.5"
+            aria-label="Go back"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5M12 19l-7-7 7-7" />
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="transition-transform group-hover:-translate-x-0.5"
+            >
+              <path d="M15 18l-6-6 6-6" />
             </svg>
-            Back
+            <span>Back</span>
           </button>
 
-          <Link href="/" className="font-serif font-bold text-sm tracking-tight text-[#2e1e12]">
-            ICR Studio
+          {/* Center: Brand emblem with crisp zoom */}
+          <Link
+            href="/"
+            className="relative w-28 h-8 sm:h-9 shrink-0 flex items-center justify-center overflow-hidden hover:opacity-90 transition-opacity"
+            aria-label="ICR Studio Home"
+          >
+            <Image
+              src={ASSETS.logo}
+              alt="ICR Studio"
+              fill
+              className="object-contain scale-[2.2]"
+              priority
+            />
           </Link>
 
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#e5ddd0] bg-white hover:bg-[#fdf2f0] hover:border-[#f5c6cb] hover:text-[#a92323] text-xs font-bold text-[#6e5c50] transition-colors cursor-pointer"
-            title="Sign Out"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            <span>Sign Out</span>
-          </button>
+          {/* Right: Balanced spacing matching back button */}
+          <div className="w-12" aria-hidden="true" />
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-24 w-full flex-1">
-        {/* Profile Card */}
-        <div className="bg-white border border-[#e5ddd0] rounded-3xl p-6 sm:p-8 shadow-sm mb-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#e07a28] to-[#c96a1f] text-white flex items-center justify-center text-xl font-bold font-serif shadow-sm shrink-0">
-                {initials}
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-xl font-bold font-serif text-[#2e1e12]">
-                    {user.name}
-                  </h1>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#f4ece0] text-[#e07a28] border border-[#e8dccb]">
-                    {user.role}
-                  </span>
-                </div>
-                <p className="text-xs text-[#6e5c50] flex items-center gap-1.5 font-medium">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-                  </svg>
-                  {user.phone || "No phone linked"}
-                </p>
+      <main className="max-w-md sm:max-w-xl mx-auto px-4 sm:px-6 pt-18 sm:pt-22 w-full flex-1">
+        {/* Personal Profile Summary */}
+        <div className="flex items-center justify-between mb-5 pt-1">
+          <div className="flex items-center gap-3.5">
+            {/* Warm circular monogram */}
+            <div className="w-12 h-12 rounded-full bg-[#f2e7d8] border border-[#dfd2c0] text-[#a55214] flex items-center justify-center text-sm font-bold font-serif shadow-2xs shrink-0 tracking-wider">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-bold text-[#2e1e12] font-serif leading-tight">
+                {user.name}
+              </h1>
+              <div className="flex items-center gap-1.5 text-xs text-[#8c786a] mt-0.5">
+                <span>{user.phone || "No phone linked"}</span>
+                <span className="text-[#d5c5b2]">·</span>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingName(!isEditingName)}
+                  className="text-[#c96a1f] hover:text-[#9e4c10] font-semibold transition-colors cursor-pointer"
+                >
+                  {isEditingName ? "Cancel" : "Edit"}
+                </button>
               </div>
             </div>
-
-            <button
-              onClick={() => setIsEditingName(!isEditingName)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#faf7f2] hover:bg-[#f2ebdc] border border-[#e5ddd0] hover:border-[#e07a28] text-xs font-bold text-[#2e1e12] transition-colors"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-              </svg>
-              {isEditingName ? "Cancel" : "Edit Name"}
-            </button>
           </div>
+        </div>
 
-          {/* Inline Edit Form */}
-          {isEditingName && (
-            <form onSubmit={handleSaveName} className="mt-4 pt-4 border-t border-[#f0e8dc] flex items-center gap-3">
-              <input
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                placeholder="Enter your full name"
-                className="flex-1 px-3.5 py-2.5 rounded-xl border border-[#e5ddd0] bg-[#faf7f2] text-xs font-bold text-[#2e1e12] outline-none focus:border-[#e07a28] focus:bg-white"
-              />
-              <button
-                type="submit"
-                disabled={savingName}
-                className="px-4 py-2.5 bg-[#e07a28] hover:bg-[#c96a1f] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-colors cursor-pointer"
-              >
-                {savingName ? "Saving..." : "Save"}
-              </button>
-            </form>
-          )}
-
-          {/* Quick Action Grid */}
-          <div className="grid grid-cols-2 gap-3 mt-6 pt-6 border-t border-[#f0e8dc]">
-            <Link
-              href="/orders"
-              className="flex items-center gap-3 p-3.5 rounded-2xl bg-[#faf7f2] border border-[#e5ddd0] hover:border-[#e07a28] hover:bg-[#fffbf7] transition-all group"
+        {/* Inline Edit Form */}
+        {isEditingName && (
+          <form onSubmit={handleSaveName} className="mb-5 p-3 rounded-2xl bg-white border border-[#e8dfd2] shadow-xs flex items-center gap-2">
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              placeholder="Enter your full name"
+              className="flex-1 px-3 py-1.5 rounded-xl border border-[#e5ddd0] bg-[#faf7f2] text-xs font-medium text-[#2e1e12] outline-none focus:border-[#e07a28] focus:bg-white"
+            />
+            <button
+              type="submit"
+              disabled={savingName}
+              className="px-3 py-1.5 bg-[#e07a28] hover:bg-[#c96a1f] text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer disabled:opacity-50 shrink-0"
             >
-              <div className="w-9 h-9 rounded-xl bg-white border border-[#e5ddd0] flex items-center justify-center shrink-0 text-[#2e1e12] group-hover:text-[#e07a28] transition-colors shadow-xs">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              {savingName ? "Saving..." : "Save"}
+            </button>
+          </form>
+        )}
+
+        {/* Account Navigation Rows (Boutique list style — no border fatigue) */}
+        <div className="bg-white border border-[#e8dfd2] rounded-2xl overflow-hidden shadow-xs divide-y divide-[#f3ede3] mb-5">
+          <Link
+            href="/orders"
+            className="flex items-center justify-between p-3.5 hover:bg-[#faf7f2] active:bg-[#f5ede0] transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-[#faf5ee] border border-[#ede3d4] text-[#8c6b4e] group-hover:text-[#c96a1f] flex items-center justify-center transition-colors shrink-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                   <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
                   <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
                   <line x1="12" y1="22.08" x2="12" y2="12" />
                 </svg>
               </div>
-              <div className="min-w-0">
-                <div className="text-xs font-bold text-[#2e1e12] group-hover:text-[#e07a28] transition-colors">
-                  My Orders
-                </div>
-                <div className="text-[11px] text-[#8c786a] truncate">Track & history</div>
+              <div>
+                <div className="text-xs font-semibold text-[#2e1e12]">My Orders</div>
+                <div className="text-[10px] text-[#8c786a]">Track packages &amp; order history</div>
               </div>
-            </Link>
+            </div>
+            <div className="flex items-center gap-1.5 text-[#a89989] group-hover:text-[#2e1e12] transition-colors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </div>
+          </Link>
 
-            <Link
-              href="/cart"
-              className="flex items-center gap-3 p-3.5 rounded-2xl bg-[#faf7f2] border border-[#e5ddd0] hover:border-[#e07a28] hover:bg-[#fffbf7] transition-all group"
-            >
-              <div className="w-9 h-9 rounded-xl bg-white border border-[#e5ddd0] flex items-center justify-center shrink-0 text-[#2e1e12] group-hover:text-[#e07a28] transition-colors shadow-xs">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <Link
+            href="/cart"
+            className="flex items-center justify-between p-3.5 hover:bg-[#faf7f2] active:bg-[#f5ede0] transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-[#faf5ee] border border-[#ede3d4] text-[#8c6b4e] group-hover:text-[#c96a1f] flex items-center justify-center transition-colors shrink-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                   <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
                   <line x1="3" y1="6" x2="21" y2="6" />
                   <path d="M16 10a4 4 0 0 1-8 0" />
                 </svg>
               </div>
-              <div className="min-w-0">
-                <div className="text-xs font-bold text-[#2e1e12] group-hover:text-[#e07a28] transition-colors">
-                  Shopping Bag
-                </div>
-                <div className="text-[11px] text-[#8c786a] truncate">{totalCount} items saved</div>
+              <div>
+                <div className="text-xs font-semibold text-[#2e1e12]">Shopping Bag</div>
+                <div className="text-[10px] text-[#8c786a]">{totalCount} {totalCount === 1 ? "item" : "items"} saved</div>
               </div>
-            </Link>
-          </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {totalCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-[#f4ece0] text-[#c96a1f] text-[10px] font-bold">
+                  {totalCount}
+                </span>
+              )}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="text-[#a89989] group-hover:text-[#2e1e12] transition-colors">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </div>
+          </Link>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex border-b border-[#e5ddd0] mb-6">
+        {/* Tactile Segmented Pill Selector */}
+        <div className="bg-[#ebe3d5] p-1 rounded-xl flex gap-1 mb-5 text-xs font-semibold">
           <button
+            type="button"
             onClick={() => setActiveTab("profile")}
-            className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-colors relative ${
-              activeTab === "profile" ? "text-[#e07a28]" : "text-[#6e5c50] hover:text-[#2e1e12]"
+            className={`flex-1 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none ${
+              activeTab === "profile"
+                ? "bg-white text-[#2e1e12] shadow-2xs"
+                : "text-[#7a685b] hover:text-[#2e1e12]"
             }`}
           >
-            Delivery Addresses ({addresses.length})
-            {activeTab === "profile" && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#e07a28] rounded-full" />
-            )}
+            <span>Saved Addresses</span>
+            <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+              activeTab === "profile" ? "bg-[#f4ece0] text-[#c96a1f]" : "bg-[#ded4c3] text-[#7a685b]"
+            }`}>
+              {addresses.length}
+            </span>
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab("saved")}
-            className={`pb-3 px-4 text-xs font-bold uppercase tracking-wider transition-colors relative ${
-              activeTab === "saved" ? "text-[#e07a28]" : "text-[#6e5c50] hover:text-[#2e1e12]"
+            className={`flex-1 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none ${
+              activeTab === "saved"
+                ? "bg-white text-[#2e1e12] shadow-2xs"
+                : "text-[#7a685b] hover:text-[#2e1e12]"
             }`}
           >
-            Custom Keepsakes
-            {activeTab === "saved" && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#e07a28] rounded-full" />
-            )}
+            <span>Custom Keepsakes</span>
           </button>
         </div>
 
         {/* Tab 1: Delivery Addresses */}
         {activeTab === "profile" && (
-          <div className="space-y-4">
-            <div className="bg-white border border-[#e5ddd0] rounded-3xl p-5 sm:p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-sm font-bold text-[#2e1e12]">Saved Delivery Addresses</h2>
-                  <p className="text-xs text-[#6e5c50] mt-0.5">
-                    Used for expedited dispatch of your handcrafted lithophanes.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowAddAddressModal(true)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#e07a28] hover:bg-[#c96a1f] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-xs cursor-pointer"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  Add Address
-                </button>
+          <div className="space-y-3">
+            {/* Section Subheading (Single contextual Add button) */}
+            <div className="flex items-center justify-between px-0.5">
+              <div>
+                <h2 className="text-xs font-bold text-[#2e1e12] uppercase tracking-wider">
+                  Delivery Addresses
+                </h2>
+                <p className="text-[11px] text-[#8c786a] mt-0.5">
+                  Used for expedited dispatch of your handcrafted lithophanes
+                </p>
               </div>
-
-              {loadingAddresses ? (
-                <div className="py-8 text-center text-xs text-[#8c786a]">Loading addresses...</div>
-              ) : addresses.length === 0 ? (
-                <div className="py-8 text-center bg-[#faf7f2] rounded-2xl border border-dashed border-[#e5ddd0] p-6">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto text-[#b5a596] mb-2">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                    <circle cx="12" cy="10" r="3" />
-                  </svg>
-                  <p className="text-xs font-bold text-[#2e1e12] mb-1">No addresses saved yet</p>
-                  <p className="text-[11px] text-[#6e5c50] max-w-xs mx-auto mb-3">
-                    Add your shipping address for fast 1-click checkout on your next customized creation.
-                  </p>
-                  <button
-                    onClick={() => setShowAddAddressModal(true)}
-                    className="px-4 py-2 bg-white border border-[#e5ddd0] hover:border-[#e07a28] text-xs font-bold text-[#2e1e12] rounded-xl transition-colors cursor-pointer"
-                  >
-                    + Add New Address
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {addresses.map((addr) => (
-                    <div
-                      key={addr.id}
-                      className="p-4 rounded-2xl border border-[#e5ddd0] bg-[#faf7f2] relative group hover:border-[#e07a28] transition-colors"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-bold text-[#2e1e12] flex items-center gap-1.5">
-                          <span>{addr.label || "Address"}</span>
-                          {addr.isDefault && (
-                            <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 bg-[#e07a28] text-white rounded-full">
-                              Default
-                            </span>
-                          )}
-                        </span>
-                        <button
-                          onClick={() => handleDeleteAddress(addr.id)}
-                          className="text-[#b5a596] hover:text-[#a92323] transition-colors p-1"
-                          title="Remove address"
-                        >
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                          </svg>
-                        </button>
-                      </div>
-                      <p className="text-xs font-medium text-[#2e1e12] leading-relaxed">
-                        {addr.line1}
-                        {addr.line2 ? `, ${addr.line2}` : ""}
-                      </p>
-                      <p className="text-xs text-[#6e5c50] mt-1">
-                        {addr.city}, {addr.state} - {addr.pincode}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+              {addresses.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAddAddressModal(true)}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-[#c96a1f] hover:text-[#9e4c10] py-1 cursor-pointer transition-colors"
+                >
+                  <span>+ Add New</span>
+                </button>
               )}
             </div>
 
-            {/* Studio Support Card */}
-            <div className="bg-white border border-[#e5ddd0] rounded-3xl p-6 shadow-sm">
-              <h2 className="text-sm font-bold text-[#2e1e12] mb-1">Need Assistance with your Order?</h2>
-              <p className="text-xs text-[#6e5c50] leading-relaxed mb-4">
-                Every lithophane lamp is precision 3D-sculpted and mounted on certified solid walnut wood. Our Bangalore studio team is available Mon - Sat (10 AM - 7 PM).
-              </p>
-              <div className="flex flex-wrap gap-3">
-                <a
-                  href="https://wa.me/919876543210?text=Hello%20ICR%20Custom%20Creations%2C%20I%20have%20an%20inquiry%20regarding%20my%20account."
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#faf7f2] hover:bg-[#f2ebdc] border border-[#e5ddd0] hover:border-[#25D366] text-xs font-bold text-[#2e1e12] rounded-xl transition-all"
-                >
-                  <span className="text-[#25D366] font-bold">●</span> WhatsApp Studio Support
-                </a>
-                <a
-                  href="mailto:hello@icrcustomcreations.com"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#faf7f2] hover:bg-[#f2ebdc] border border-[#e5ddd0] hover:border-[#e07a28] text-xs font-bold text-[#2e1e12] rounded-xl transition-all"
-                >
-                  Email hello@icrcustomcreations.com
-                </a>
+            {loadingAddresses ? (
+              <div className="py-8 text-center text-xs text-[#8c786a] bg-white rounded-2xl border border-[#e8dfd2]">
+                Loading addresses...
               </div>
-            </div>
+            ) : addresses.length === 0 ? (
+              /* Warm artisanal empty state (No dashed upload box, single clean button) */
+              <div className="p-6 text-center bg-white rounded-2xl border border-[#e8dfd2] shadow-xs">
+                <div className="w-10 h-10 mx-auto rounded-full bg-[#faf5ee] border border-[#ede3d4] flex items-center justify-center text-[#a89989] mb-3">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                </div>
+                <h3 className="text-xs font-bold text-[#2e1e12] mb-1">No saved addresses yet</h3>
+                <p className="text-[11px] text-[#8c786a] max-w-xs mx-auto mb-4 leading-relaxed">
+                  Save your delivery address for seamless 1-click checkout on your next personalized creation.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowAddAddressModal(true)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#e07a28] hover:bg-[#c96a1f] text-white text-xs font-semibold rounded-xl transition-all shadow-xs cursor-pointer active:scale-[0.98]"
+                >
+                  <span>+ Add Delivery Address</span>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {addresses.map((addr) => (
+                  <div
+                    key={addr.id}
+                    className="p-3.5 rounded-2xl border border-[#e8dfd2] bg-white shadow-xs"
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-[#2e1e12]">{addr.label || "Address"}</span>
+                        {addr.isDefault && (
+                          <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 bg-[#f4ece0] text-[#c96a1f] rounded-md border border-[#eddcca]">
+                            Default
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleDeleteAddress(addr.id)}
+                        className="text-[#a89989] hover:text-[#dc2626] transition-colors p-1 cursor-pointer"
+                        title="Remove address"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                      </button>
+                    </div>
+                    <p className="text-xs font-medium text-[#2e1e12] leading-relaxed">
+                      {addr.line1}{addr.line2 ? `, ${addr.line2}` : ""}
+                    </p>
+                    <p className="text-[11px] text-[#8c786a] mt-0.5">
+                      {addr.city}, {addr.state} - {addr.pincode}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* Tab 2: Custom Keepsakes */}
         {activeTab === "saved" && (
-          <div className="bg-white border border-[#e5ddd0] rounded-3xl p-8 shadow-sm text-center">
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-[#faf7f2] border border-[#e5ddd0] flex items-center justify-center text-[#e07a28] mb-4">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <div className="bg-white border border-[#e8dfd2] rounded-2xl p-6 shadow-xs text-center">
+            <div className="w-11 h-11 mx-auto rounded-full bg-[#faf5ee] border border-[#ede3d4] flex items-center justify-center text-[#c96a1f] mb-3">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
               </svg>
             </div>
-            <h2 className="text-base font-bold text-[#2e1e12] mb-1">Create Your Next Keepsake</h2>
-            <p className="text-xs text-[#6e5c50] max-w-sm mx-auto mb-5 leading-relaxed">
-              Design a custom backlit 3D photo lamp with custom text engraving, anniversary dates, or Spotify code.
+            <h2 className="text-sm font-bold text-[#2e1e12] font-serif mb-1">Create Your Next Keepsake</h2>
+            <p className="text-[11px] text-[#8c786a] max-w-xs mx-auto mb-4 leading-relaxed">
+              Design a custom backlit 3D photo lamp with text engraving, anniversary dates, or Spotify code.
             </p>
             <Link
               href="/customize"
-              className="inline-flex items-center justify-center bg-[#e07a28] hover:bg-[#c96a1f] text-white font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition-all shadow-sm active:scale-[0.98]"
+              className="inline-flex items-center justify-center bg-[#e07a28] hover:bg-[#c96a1f] text-white font-semibold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs active:scale-[0.98]"
             >
               Start New Customization
             </Link>
           </div>
         )}
+
+        {/* Studio Concierge (High-Touch Customer Care) */}
+        <div className="mt-7 pt-5 border-t border-[#ebe3d5]">
+          <div className="mb-3 px-0.5">
+            <h3 className="text-xs font-bold text-[#2e1e12] uppercase tracking-wider">Studio Concierge</h3>
+            <p className="text-[11px] text-[#8c786a] mt-0.5">Direct assistance from our Bangalore artisan workshop</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            <a
+              href="https://wa.me/919876543210?text=Hello%20ICR%20Custom%20Creations%2C%20I%20have%20an%20inquiry%20regarding%20my%20account."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-white border border-[#e8dfd2] hover:border-[#25D366] text-xs font-semibold text-[#2e1e12] transition-all shadow-2xs"
+            >
+              <span className="w-2 h-2 rounded-full bg-[#25D366]" />
+              <span>WhatsApp</span>
+            </a>
+            <a
+              href="mailto:hello@icrcustomcreations.com"
+              className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-white border border-[#e8dfd2] hover:border-[#c96a1f] text-xs font-semibold text-[#2e1e12] transition-all shadow-2xs"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#8c786a]">
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+              </svg>
+              <span>Email Studio</span>
+            </a>
+          </div>
+        </div>
+
+        {/* Refined, Understated Sign Out Link */}
+        <div className="text-center pt-8 pb-4">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-[#8c786a] hover:text-[#a92323] transition-colors py-2 px-3 cursor-pointer"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            <span>Sign Out of Account</span>
+          </button>
+        </div>
       </main>
 
       {/* Add Address Modal */}
       {showAddAddressModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="bg-white border border-[#e5ddd0] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold font-serif text-[#2e1e12]">Add Delivery Address</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-xs">
+          <div className="bg-white border border-[#e5ddd0] rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-md w-full shadow-xl">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm sm:text-base font-bold text-[#2e1e12]">Add Delivery Address</h3>
               <button
+                type="button"
                 onClick={() => setShowAddAddressModal(false)}
-                className="text-[#8c786a] hover:text-[#2e1e12] p-1"
+                className="text-[#8c786a] hover:text-[#2e1e12] p-1 cursor-pointer transition-colors"
+                aria-label="Close modal"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="18" y1="6" x2="6" y2="18" />
                   <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
             </div>
 
-            <form onSubmit={handleAddAddress} className="space-y-3.5">
+            <form onSubmit={handleAddAddress} className="space-y-2.5 sm:space-y-3">
               <div>
-                <label className="block text-[11px] font-bold text-[#2e1e12] uppercase tracking-wider mb-1">
+                <label className="block text-[10px] sm:text-[11px] font-bold text-[#2e1e12] uppercase tracking-wider mb-1">
                   Address Label
                 </label>
                 <input
@@ -483,12 +546,12 @@ export default function AccountPage() {
                   value={newAddress.label}
                   onChange={(e) => setNewAddress({ ...newAddress, label: e.target.value })}
                   placeholder="e.g. Home, Office, Studio"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#e5ddd0] bg-[#faf7f2] text-xs font-semibold text-[#2e1e12] outline-none focus:border-[#e07a28] focus:bg-white"
+                  className="w-full px-3 py-2 rounded-lg sm:rounded-xl border border-[#e5ddd0] bg-[#faf7f2] text-xs font-medium text-[#2e1e12] outline-none focus:border-[#e07a28] focus:bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-[#2e1e12] uppercase tracking-wider mb-1">
+                <label className="block text-[10px] sm:text-[11px] font-bold text-[#2e1e12] uppercase tracking-wider mb-1">
                   Street Address (Line 1) *
                 </label>
                 <input
@@ -497,12 +560,12 @@ export default function AccountPage() {
                   value={newAddress.line1}
                   onChange={(e) => setNewAddress({ ...newAddress, line1: e.target.value })}
                   placeholder="Flat, building, street name"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#e5ddd0] bg-[#faf7f2] text-xs font-semibold text-[#2e1e12] outline-none focus:border-[#e07a28] focus:bg-white"
+                  className="w-full px-3 py-2 rounded-lg sm:rounded-xl border border-[#e5ddd0] bg-[#faf7f2] text-xs font-medium text-[#2e1e12] outline-none focus:border-[#e07a28] focus:bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-[#2e1e12] uppercase tracking-wider mb-1">
+                <label className="block text-[10px] sm:text-[11px] font-bold text-[#2e1e12] uppercase tracking-wider mb-1">
                   Apartment, Landmark (Optional)
                 </label>
                 <input
@@ -510,13 +573,13 @@ export default function AccountPage() {
                   value={newAddress.line2}
                   onChange={(e) => setNewAddress({ ...newAddress, line2: e.target.value })}
                   placeholder="Near landmark or floor"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#e5ddd0] bg-[#faf7f2] text-xs font-semibold text-[#2e1e12] outline-none focus:border-[#e07a28] focus:bg-white"
+                  className="w-full px-3 py-2 rounded-lg sm:rounded-xl border border-[#e5ddd0] bg-[#faf7f2] text-xs font-medium text-[#2e1e12] outline-none focus:border-[#e07a28] focus:bg-white"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2e1e12] uppercase tracking-wider mb-1">
+                  <label className="block text-[10px] sm:text-[11px] font-bold text-[#2e1e12] uppercase tracking-wider mb-1">
                     City *
                   </label>
                   <input
@@ -525,11 +588,11 @@ export default function AccountPage() {
                     value={newAddress.city}
                     onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
                     placeholder="Bengaluru"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#e5ddd0] bg-[#faf7f2] text-xs font-semibold text-[#2e1e12] outline-none focus:border-[#e07a28] focus:bg-white"
+                    className="w-full px-3 py-2 rounded-lg sm:rounded-xl border border-[#e5ddd0] bg-[#faf7f2] text-xs font-medium text-[#2e1e12] outline-none focus:border-[#e07a28] focus:bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-[#2e1e12] uppercase tracking-wider mb-1">
+                  <label className="block text-[10px] sm:text-[11px] font-bold text-[#2e1e12] uppercase tracking-wider mb-1">
                     State *
                   </label>
                   <input
@@ -538,13 +601,13 @@ export default function AccountPage() {
                     value={newAddress.state}
                     onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })}
                     placeholder="Karnataka"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#e5ddd0] bg-[#faf7f2] text-xs font-semibold text-[#2e1e12] outline-none focus:border-[#e07a28] focus:bg-white"
+                    className="w-full px-3 py-2 rounded-lg sm:rounded-xl border border-[#e5ddd0] bg-[#faf7f2] text-xs font-medium text-[#2e1e12] outline-none focus:border-[#e07a28] focus:bg-white"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-[#2e1e12] uppercase tracking-wider mb-1">
+                <label className="block text-[10px] sm:text-[11px] font-bold text-[#2e1e12] uppercase tracking-wider mb-1">
                   Pincode *
                 </label>
                 <input
@@ -554,11 +617,11 @@ export default function AccountPage() {
                   value={newAddress.pincode}
                   onChange={(e) => setNewAddress({ ...newAddress, pincode: e.target.value.replace(/\D/g, "") })}
                   placeholder="560001"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#e5ddd0] bg-[#faf7f2] text-xs font-semibold text-[#2e1e12] outline-none focus:border-[#e07a28] focus:bg-white"
+                  className="w-full px-3 py-2 rounded-lg sm:rounded-xl border border-[#e5ddd0] bg-[#faf7f2] text-xs font-medium text-[#2e1e12] outline-none focus:border-[#e07a28] focus:bg-white"
                 />
               </div>
 
-              <div className="pt-1">
+              <div className="pt-0.5">
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input
                     type="checkbox"
@@ -572,18 +635,18 @@ export default function AccountPage() {
                 </label>
               </div>
 
-              <div className="flex gap-2.5 pt-3">
+              <div className="flex gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowAddAddressModal(false)}
-                  className="w-1/2 py-3 bg-[#faf7f2] hover:bg-[#f2ebdc] text-[#2e1e12] text-xs font-bold uppercase tracking-wider rounded-xl transition-colors"
+                  className="w-1/2 py-2.5 bg-[#faf7f2] hover:bg-[#f2ebdc] text-[#2e1e12] text-xs font-bold uppercase tracking-wider rounded-lg sm:rounded-xl transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingAddress}
-                  className="w-1/2 py-3 bg-[#e07a28] hover:bg-[#c96a1f] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-colors cursor-pointer"
+                  className="w-1/2 py-2.5 bg-[#e07a28] hover:bg-[#c96a1f] text-white text-xs font-bold uppercase tracking-wider rounded-lg sm:rounded-xl transition-colors cursor-pointer"
                 >
                   {savingAddress ? "Saving..." : "Save Address"}
                 </button>

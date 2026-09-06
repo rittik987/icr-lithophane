@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -34,7 +34,7 @@ function RegisterForm() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/account";
 
-  const { register } = useAuth();
+  const { user, isLoading, register } = useAuth();
   const { showToast } = useToast();
 
   const [name, setName] = useState("");
@@ -46,6 +46,13 @@ function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Auth guard: if already logged in, navigate away immediately (no coming back to register)
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.replace(redirect);
+    }
+  }, [isLoading, user, redirect, router]);
 
   function handlePhoneChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.value.replace(/\D/g, "");
@@ -110,7 +117,8 @@ function RegisterForm() {
           message: "Welcome to ICR Custom Creations",
           type: "success",
         });
-        router.push(redirect);
+        // Use replace so registration page is removed from browser history stack
+        router.replace(redirect);
       } else {
         setError(res.error || "Registration failed. Mobile number may already be in use.");
       }
@@ -127,6 +135,14 @@ function RegisterForm() {
       message: "Configure GOOGLE_CLIENT_ID in backend .env to enable instant Google Sign-Up",
       type: "info",
     });
+  }
+
+  if (user) {
+    return (
+      <div className="min-h-screen bg-[#FAF7F2] flex items-center justify-center p-4">
+        <div className="w-8 h-8 border-2 border-[#E07A28] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (

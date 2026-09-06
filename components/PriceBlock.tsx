@@ -1,10 +1,24 @@
+"use client";
+
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { ASSETS } from "@/lib/assets";
+import { useAuth } from "@/context/AuthContext";
 
 export default function PriceBlock() {
-  return (
-    <div className="bg-white border border-[#e5ddd0] rounded-xl p-4 flex flex-col gap-4 shadow-sm w-full">
+  const router = useRouter();
+  const { user } = useAuth();
 
+  function handleOrderClick() {
+    if (!user) {
+      router.push("/login?redirect=/customize");
+    } else {
+      router.push("/customize");
+    }
+  }
+
+  return (
+    <div className="bg-white border border-[#e5ddd0] rounded-xl p-4 sm:p-5 flex flex-col gap-4 shadow-sm w-full">
       {/* Pricing row */}
       <div className="flex items-center justify-between w-full">
         <div className="flex flex-col gap-1">
@@ -29,6 +43,18 @@ export default function PriceBlock() {
         </div>
       </div>
 
+      {/* Desktop Order CTA Button — guarded */}
+      <button
+        type="button"
+        onClick={handleOrderClick}
+        className="hidden lg:flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl bg-gradient-to-b from-[#e07a28] to-[#c96a1e] hover:from-[#d26f1e] hover:to-[#b85315] text-white text-xs font-bold uppercase tracking-wider transition-all shadow-sm active:scale-[0.99] cursor-pointer"
+      >
+        <span>Customize &amp; Place Order</span>
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M7.5 15L12.5 10L7.5 5" />
+        </svg>
+      </button>
+
       {/* What you get */}
       <div className="flex flex-col gap-1.5">
         <p className="text-[#6e5c50] text-[12px] font-sans font-medium">What&apos;s included:</p>
@@ -51,7 +77,7 @@ export default function PriceBlock() {
       </div>
 
       {/* Trust line */}
-      <div className="flex items-center justify-center gap-1.5 w-full">
+      <div className="flex items-center justify-center gap-1.5 w-full pt-1 border-t border-[#f0e8dc]">
         <div className="relative w-3 h-3 shrink-0">
           <Image
             src={ASSETS.iconShield}
