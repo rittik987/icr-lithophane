@@ -52,6 +52,7 @@ export default function ContactUsPage() {
               src={ASSETS.logo}
               alt="ICR Custom Creations"
               fill
+              sizes="64px"
               className="object-contain"
               unoptimized
             />

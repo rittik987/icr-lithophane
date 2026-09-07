@@ -667,6 +667,7 @@ function CheckoutContent() {
               src={ASSETS.logo}
               alt="ICR Custom Creations"
               fill
+              sizes="40px"
               className="object-contain"
               priority
             />
@@ -759,9 +760,9 @@ function CheckoutContent() {
 
               {/* Case A: User HAS Saved Addresses */}
               {isAddressesLoading ? (
-                <div className="py-6 flex items-center justify-center text-xs text-[#6e5c50] font-sans gap-2">
-                  <div className="w-4 h-4 border-2 border-[#e07a28] border-t-transparent rounded-full animate-spin"></div>
-                  <span>Loading your addresses...</span>
+                <div className="flex flex-col gap-3 mb-5">
+                  <div className="skeleton-shimmer rounded-xl h-[72px] w-full" />
+                  <div className="skeleton-shimmer rounded-xl h-[72px] w-full" />
                 </div>
               ) : hasSavedAddresses ? (
                 <div className="mb-5 flex flex-col gap-3">

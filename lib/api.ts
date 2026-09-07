@@ -32,7 +32,10 @@ export interface ApiResponse<T = unknown> {
 
 let isRedirectingToLogin = false;
 
-// helper to get stored access token
+// ─────────────────────────────────────────────────────────
+// TOKEN UTILITIES
+// ─────────────────────────────────────────────────────────
+
 export function getStoredToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("icr_token");
@@ -57,48 +60,133 @@ export function handleUnauthorized(): void {
   }
 }
 
-// generic request wrapper handling bearer token and credentials
+/**
+ * Decode the JWT exp field and return true if it expires within the next 60 seconds.
+ * Never throws — returns false on any parse error so requests still go through.
+ */
+function isTokenExpiringSoon(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    // exp is in seconds; add a 60-second buffer so we refresh before the actual expiry
+    return typeof payload.exp === "number" && payload.exp * 1000 < Date.now() + 60_000;
+  } catch {
+    return false;
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// SINGLETON REFRESH — prevents race conditions when multiple
+// concurrent requests all detect an expired token at once.
+// All callers share a single in-flight refresh promise.
+// ─────────────────────────────────────────────────────────
+
+let _refreshPromise: Promise<boolean> | null = null;
+
+async function executeRefresh(): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: "POST",
+      credentials: "include", // send httpOnly refreshToken cookie
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!res.ok) return false;
+
+    const data = await res.json();
+    if (data?.success && data?.data?.accessToken) {
+      localStorage.setItem("icr_token", data.data.accessToken);
+      if (data.data.user) {
+        localStorage.setItem("icr_user", JSON.stringify(data.data.user));
+      }
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Attempt a silent token refresh. Concurrent callers share the same promise
+ * so only one refresh request is ever in-flight at a time.
+ */
+export function tryRefreshToken(): Promise<boolean> {
+  if (!_refreshPromise) {
+    _refreshPromise = executeRefresh().finally(() => {
+      _refreshPromise = null;
+    });
+  }
+  return _refreshPromise;
+}
+
+// ─────────────────────────────────────────────────────────
+// CORE REQUEST WRAPPER
+// ─────────────────────────────────────────────────────────
+
+/**
+ * Generic fetch wrapper. Behaviour:
+ * 1. If the stored access token is expiring within 60s, proactively refresh first.
+ * 2. Fire the request.
+ * 3. On a 401, attempt one silent refresh then retry the original request.
+ * 4. If the retry also 401s (refresh token gone/expired), call handleUnauthorized().
+ */
 export async function apiRequest<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  _isRetry = false   // internal flag to prevent infinite refresh loops
 ): Promise<ApiResponse<T>> {
+  const isAuthSubmission =
+    endpoint.startsWith("/auth/login") ||
+    endpoint.startsWith("/auth/register") ||
+    endpoint.startsWith("/auth/refresh");
+
+  // Step 1 — proactive refresh if token expires soon (skip for auth endpoints)
+  if (!isAuthSubmission && !_isRetry) {
+    const token = getStoredToken();
+    if (token && isTokenExpiringSoon(token)) {
+      const refreshed = await tryRefreshToken();
+      if (!refreshed) {
+        handleUnauthorized();
+        return { success: false, error: "Session expired. Please log in again." };
+      }
+    }
+  }
+
   const token = getStoredToken();
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(options.headers || {}),
+    ...((options.headers as Record<string, string>) || {}),
   };
 
   if (token) {
-    (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   try {
     const res = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
-      credentials: "include", // send httpOnly cookies like refreshToken
+      credentials: "include",
     });
 
-    const isAuthSubmission =
-      endpoint.startsWith("/auth/login") || endpoint.startsWith("/auth/register");
-
-    if (res.status === 401 && !isAuthSubmission) {
+    // Step 3 — on 401, try refresh once then retry
+    if (res.status === 401 && !isAuthSubmission && !_isRetry) {
+      const refreshed = await tryRefreshToken();
+      if (refreshed) {
+        // Retry original request with the new token
+        return apiRequest<T>(endpoint, options, true);
+      }
       handleUnauthorized();
-      return {
-        success: false,
-        error: "Invalid or expired session. Redirecting to login...",
-      };
+      return { success: false, error: "Session expired. Please log in again." };
+    }
+
+    // If already a retry and still 401 — session is truly gone
+    if (res.status === 401 && !isAuthSubmission && _isRetry) {
+      handleUnauthorized();
+      return { success: false, error: "Session expired. Please log in again." };
     }
 
     const data = await res.json();
-
-    if (
-      !isAuthSubmission &&
-      (data?.error === "Invalid or expired token" || data?.error === "Authentication required")
-    ) {
-      handleUnauthorized();
-    }
-
     return data as ApiResponse<T>;
   } catch (err: unknown) {
     return {
@@ -107,6 +195,10 @@ export async function apiRequest<T>(
     };
   }
 }
+
+// ─────────────────────────────────────────────────────────
+// AUTH API
+// ─────────────────────────────────────────────────────────
 
 export const authApi = {
   async register(phone: string, password: string, name: string) {
@@ -135,6 +227,10 @@ export const authApi = {
     });
   },
 };
+
+// ─────────────────────────────────────────────────────────
+// USER API
+// ─────────────────────────────────────────────────────────
 
 export const userApi = {
   async getProfile() {
@@ -436,44 +532,66 @@ export interface UploadedAsset {
 export const uploadApi = {
   /**
    * Upload one or more image files to Cloudinary via the backend.
-   * Pass an optional folder name (defaults to "icr-uploads").
+   * On 401, attempts a silent token refresh and retries once before logging out.
    */
-  async uploadFiles(files: File[], folder?: string) {
-    const token = getStoredToken();
-    const formData = new FormData();
-    files.forEach((f) => formData.append("files", f));
+  async uploadFiles(files: File[], folder?: string): Promise<{
+    success: boolean;
+    uploaded: number;
+    assets: UploadedAsset[];
+    failed?: { name: string; error: string }[];
+    error?: string;
+  }> {
+    const doUpload = async () => {
+      const token = getStoredToken();
+      const formData = new FormData();
+      files.forEach((f) => formData.append("files", f));
 
-    const url = folder
-      ? `${API_BASE_URL}/upload?folder=${encodeURIComponent(folder)}`
-      : `${API_BASE_URL}/upload`;
+      const url = folder
+        ? `${API_BASE_URL}/upload?folder=${encodeURIComponent(folder)}`
+        : `${API_BASE_URL}/upload`;
 
-    try {
-      const res = await fetch(url, {
+      return fetch(url, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         credentials: "include",
         body: formData,
       });
+    };
 
+    try {
+      // Proactive refresh if token expiring soon
+      const token = getStoredToken();
+      if (token && isTokenExpiringSoon(token)) {
+        const refreshed = await tryRefreshToken();
+        if (!refreshed) {
+          handleUnauthorized();
+          return { success: false, uploaded: 0, assets: [], error: "Session expired. Please log in again." };
+        }
+      }
+
+      let res = await doUpload();
+
+      // On 401 — try refresh once, then retry upload
+      if (res.status === 401) {
+        const refreshed = await tryRefreshToken();
+        if (refreshed) {
+          res = await doUpload();
+        } else {
+          handleUnauthorized();
+          return { success: false, uploaded: 0, assets: [], error: "Session expired. Please log in again." };
+        }
+      }
+
+      // If still 401 after retry — session truly gone
       if (res.status === 401) {
         handleUnauthorized();
-        return {
-          success: false,
-          uploaded: 0,
-          assets: [] as UploadedAsset[],
-          error: "Invalid or expired session. Redirecting to login...",
-        };
+        return { success: false, uploaded: 0, assets: [], error: "Session expired. Please log in again." };
       }
 
       const data = await res.json();
-
-      if (data?.error === "Invalid or expired token" || data?.error === "Authentication required") {
-        handleUnauthorized();
-      }
-
       return data as { success: boolean; uploaded: number; assets: UploadedAsset[]; failed?: { name: string; error: string }[] };
     } catch (err) {
-      return { success: false, uploaded: 0, assets: [] as UploadedAsset[], error: String(err) };
+      return { success: false, uploaded: 0, assets: [], error: String(err) };
     }
   },
 };

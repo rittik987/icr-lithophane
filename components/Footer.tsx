@@ -1,6 +1,6 @@
 export default function Footer() {
   return (
-    <footer className="border-t border-[#e5ddd0] flex flex-col items-center gap-3 px-4 pt-6 pb-4 w-full">
+    <footer className="border-t border-[#e5ddd0] flex flex-col items-center gap-3 px-4 pt-6 pb-24 lg:pb-6 w-full">
       {/* Brand name */}
       <p className="text-[#2e1e12] text-base font-bold tracking-wide text-center font-serif">
         ICR CUSTOM CREATIONS

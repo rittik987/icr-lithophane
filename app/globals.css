@@ -94,6 +94,23 @@ button {
      Tailwind's preflight handles the appearance reset. */
 }
 
+/* ── Skeleton shimmer ───────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #ede5d6 0px,
+    #f5efea 80px,
+    #ede5d6 160px
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
 /* Accessibility */
 .sr-only {
   position: absolute;

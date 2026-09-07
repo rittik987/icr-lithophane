@@ -19,6 +19,7 @@ export default function StarRating({ count = 5, size = 12 }: StarRatingProps) {
             src={ASSETS.iconStarSm}
             alt=""
             fill
+            sizes="14px"
             className="object-contain"
             unoptimized
           />

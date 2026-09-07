@@ -28,6 +28,7 @@ export default function PrivacyPolicyPage() {
               src={ASSETS.logo}
               alt="ICR Custom Creations"
               fill
+              sizes="64px"
               className="object-contain"
               unoptimized
             />

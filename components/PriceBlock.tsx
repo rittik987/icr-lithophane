@@ -83,6 +83,7 @@ export default function PriceBlock() {
             src={ASSETS.iconShield}
             alt=""
             fill
+            sizes="12px"
             className="object-contain"
             unoptimized
           />

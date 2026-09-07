@@ -63,8 +63,10 @@ export default function MediaGalleryDesktop({ className = "" }: MediaGalleryDesk
                   src={slide.src}
                   alt={slide.alt}
                   fill
+                  sizes="(max-width: 1024px) 100vw, 650px"
                   className="object-cover"
                   priority={slide.id === 0}
+                  loading={slide.id === 0 ? "eager" : "lazy"}
                   unoptimized
                 />
               </div>
@@ -124,6 +126,7 @@ export default function MediaGalleryDesktop({ className = "" }: MediaGalleryDesk
               src={slide.src}
               alt={slide.alt}
               fill
+              sizes="150px"
               className="object-cover"
               unoptimized
             />

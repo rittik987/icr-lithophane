@@ -71,6 +71,7 @@ export default function ReviewsSection() {
                 src={ASSETS.iconStar}
                 alt=""
                 fill
+                sizes="16px"
                 className="object-contain"
                 unoptimized
               />

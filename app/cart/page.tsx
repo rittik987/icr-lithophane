@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useCart, CartItem } from "@/lib/cart";
 import { ASSETS } from "@/lib/assets";
 import { couponApi, CouponValidation } from "@/lib/api";
+import { CartItemSkeleton } from "@/components/Skeleton";
 
 export default function CartPage() {
   const router = useRouter();
@@ -18,6 +19,8 @@ export default function CartPage() {
   const [promoLoading, setPromoLoading] = useState(false);
   const [selectedPreviewItem, setSelectedPreviewItem] = useState<CartItem | null>(null);
   const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
+  // Inline "clear bag" confirmation — avoids native window.confirm()
+  const [confirmClear, setConfirmClear] = useState(false);
 
   function toggleExpand(id: string) {
     setExpandedDetails((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -53,14 +56,16 @@ export default function CartPage() {
 
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-[#faf7f2] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <svg className="animate-spin w-8 h-8 text-[#e07a28]" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-          </svg>
-          <span className="text-[#6e5c50] text-sm font-sans">Loading your bag...</span>
-        </div>
+      <div className="min-h-screen bg-[#faf7f2] flex flex-col">
+        {/* Skeleton header */}
+        <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md bg-[rgba(250,247,242,0.96)] border-b border-[#e5ddd0] h-16" />
+
+        <main className="pt-20 pb-40 lg:pb-16 max-w-[1200px] mx-auto px-4 lg:px-8 w-full">
+          <div className="mt-4 flex flex-col gap-4">
+            <CartItemSkeleton />
+            <CartItemSkeleton />
+          </div>
+        </main>
       </div>
     );
   }
@@ -85,6 +90,7 @@ export default function CartPage() {
               src={ASSETS.logo}
               alt="ICR Custom Creations"
               fill
+              sizes="40px"
               className="object-contain"
               priority
             />
@@ -142,14 +148,31 @@ export default function CartPage() {
               <h1 className="text-2xl lg:text-3xl font-serif font-bold text-[#2e1e12]">
                 Shopping Bag ({totalCount})
               </h1>
-              <button
-                onClick={() => {
-                  if (confirm("Are you sure you want to clear your bag?")) clear();
-                }}
-                className="text-xs text-[#6e5c50] hover:text-[#b83a3a] transition-colors font-sans underline"
-              >
-                Clear all
-              </button>
+              {/* Inline clear confirmation — no native window.confirm() */}
+              {confirmClear ? (
+                <div className="flex items-center gap-2 text-xs font-sans">
+                  <span className="text-[#6e5c50]">Clear all items?</span>
+                  <button
+                    onClick={() => { clear(); setConfirmClear(false); }}
+                    className="text-[#b83a3a] font-bold hover:underline"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    onClick={() => setConfirmClear(false)}
+                    className="text-[#6e5c50] font-medium hover:underline"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmClear(true)}
+                  className="text-xs text-[#6e5c50] hover:text-[#b83a3a] transition-colors font-sans underline"
+                >
+                  Clear all
+                </button>
+              )}
             </div>
 
             {/* Main grid */}
@@ -337,7 +360,7 @@ export default function CartPage() {
               </div>
 
               {/* Right Column: Order Summary & Checkout */}
-              <div className="flex flex-col gap-4 sticky top-24">
+              <div className="hidden lg:flex flex-col gap-4 sticky top-24">
                 <div className="bg-white border border-[#e5ddd0] rounded-2xl p-5 lg:p-6 shadow-sm">
                   <h2 className="text-lg font-serif font-bold text-[#2e1e12] mb-4">
                     Order Summary
@@ -519,10 +542,49 @@ export default function CartPage() {
       {items.length > 0 && (
         <aside
           aria-label="Mobile checkout bar"
-          className="fixed bottom-0 left-0 right-0 z-40 lg:hidden backdrop-blur-md bg-[rgba(250,247,242,0.98)] border-t border-[#e5ddd0] shadow-[0_-4px_12px_rgba(46,30,18,0.08)] px-6 py-3.5"
-          style={{ paddingBottom: "calc(14px + env(safe-area-inset-bottom, 0px))" }}
+          className="fixed bottom-0 left-0 right-0 z-40 lg:hidden backdrop-blur-md bg-[rgba(250,247,242,0.98)] border-t border-[#e5ddd0] shadow-[0_-4px_12px_rgba(46,30,18,0.08)]"
+          style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
         >
-          <div className="flex items-center justify-between gap-4 max-w-lg mx-auto">
+          {/* Coupon input strip — visible when no coupon applied */}
+          {!appliedPromo && (
+            <div className="px-4 pt-2.5 pb-1">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Promo code (e.g. WELCOME10)"
+                  value={promoInput}
+                  onChange={(e) => setPromoInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleApplyPromo()}
+                  className="flex-1 bg-[#faf7f2] border border-[#e5ddd0] rounded-xl px-3 py-2 text-xs font-sans text-[#2e1e12] placeholder:text-[#a39485] focus:outline-none focus:border-[#e07a28]"
+                />
+                <button
+                  onClick={handleApplyPromo}
+                  disabled={promoLoading}
+                  className="bg-[#2e1e12] hover:bg-[#443021] text-white text-xs font-bold font-sans px-4 py-2 rounded-xl transition-colors shrink-0 disabled:opacity-60"
+                >
+                  {promoLoading ? "..." : "Apply"}
+                </button>
+              </div>
+              {promoError && (
+                <p className="text-[11px] text-[#b83a3a] font-sans mt-1 px-1">{promoError}</p>
+              )}
+            </div>
+          )}
+
+          {/* Applied coupon pill */}
+          {appliedPromo && (
+            <div className="px-4 pt-2.5 pb-1">
+              <div className="flex items-center justify-between bg-[#eaf5ec] border border-[#c6e6ca] rounded-xl px-3 py-2 text-xs text-[#1e7234] font-sans">
+                <span className="font-semibold">✓ {appliedPromo.coupon.code} — saving ₹{(appliedPromo.discountAmount / 100).toLocaleString("en-IN")}</span>
+                <button onClick={handleRemovePromo} className="text-[#6e5c50] hover:text-[#b83a3a] font-bold ml-2 text-xs">✕</button>
+              </div>
+            </div>
+          )}
+
+          {/* Total + checkout button row */}
+          <div
+            className="flex items-center justify-between gap-4 max-w-lg mx-auto px-4 py-3"
+          >
             <div className="flex flex-col">
               <span className="text-[11px] text-[#6e5c50] font-sans block leading-none font-medium">
                 Total Payable
@@ -530,10 +592,15 @@ export default function CartPage() {
               <span className="text-xl font-sans font-bold text-[#e07a28] mt-0.5">
                 ₹{finalTotal.toLocaleString("en-IN")}
               </span>
+              {discountAmount > 0 && (
+                <span className="text-[10px] text-[#1e7234] font-sans font-medium">
+                  Saved ₹{discountAmount.toLocaleString("en-IN")}
+                </span>
+              )}
             </div>
 
             <button
-              onClick={() => router.push("/checkout")}
+              onClick={() => router.push(`/checkout${appliedPromo ? `?coupon=${appliedPromo.coupon.code}` : ""}`)}
               className="bg-[#e07a28] hover:bg-[#c96a1f] text-white font-bold font-sans text-xs uppercase tracking-wider px-6 py-3.5 rounded-xl shadow-md transition-all active:scale-[0.98] flex items-center gap-2 shrink-0"
             >
               <span>Checkout</span>
