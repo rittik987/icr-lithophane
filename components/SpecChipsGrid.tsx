@@ -62,6 +62,7 @@ export default function SpecChipsGrid() {
                 src={spec.icon}
                 alt={spec.altText}
                 fill
+                sizes="24px"
                 className="object-contain"
                 unoptimized
               />

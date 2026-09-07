@@ -51,8 +51,10 @@ export default function MediaCarousel({ className = "" }: MediaCarouselProps) {
                 src={slide.src}
                 alt={slide.alt}
                 fill
+                sizes="(max-width: 768px) 100vw, 600px"
                 className="object-cover"
                 priority={slide.id === 0}
+                loading={slide.id === 0 ? "eager" : "lazy"}
                 unoptimized
               />
             </div>

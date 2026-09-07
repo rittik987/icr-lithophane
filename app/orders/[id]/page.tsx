@@ -148,6 +148,7 @@ export default function OrderDetailsPage() {
               src={ASSETS.logo}
               alt="ICR Custom Creations"
               fill
+              sizes="48px"
               className="object-contain"
               priority
             />

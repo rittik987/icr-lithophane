@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { User, authApi, userApi, handleUnauthorized, clearStoredAuth } from "@/lib/api";
+import { User, authApi, userApi, tryRefreshToken, handleUnauthorized, clearStoredAuth } from "@/lib/api";
 
 interface AuthContextType {
   user: User | null;
@@ -18,7 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function setAuthCookie() {
   if (typeof document !== "undefined") {
-    // 7 days cookie for proxy.ts server interceptor
+    // 7-day presence cookie for the Next.js middleware route guard (proxy.ts)
     document.cookie = "icr_auth=1; path=/; max-age=604800; SameSite=Lax";
   }
 }
@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize from localStorage immediately for fast, zero-flicker UI
+  // ── Step 1: Restore state from localStorage immediately (zero-flicker) ──
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem("icr_user");
@@ -42,45 +42,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(storedToken);
       }
     } catch {
-      // fallback if parsing fails
+      // Silently ignore JSON parse failures
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Background token verification and silent refresh
+  // ── Step 2: Background session verification on every app mount ──
+  // Strategy:
+  //   a) Try GET /users/me with the stored token
+  //   b) If that fails with a network error (not a 401), do nothing — keep the
+  //      cached user rather than logging them out over a transient failure.
+  //   c) If it fails because the token is expired (apiRequest already tried to
+  //      refresh internally), attempt one explicit refresh here.
+  //   d) Only call handleUnauthorized() when the refresh token itself is gone/expired.
   useEffect(() => {
     let mounted = true;
 
     async function syncSession() {
       const storedToken = localStorage.getItem("icr_token");
+      // No token stored at all — user is genuinely logged out, nothing to do
       if (!storedToken) return;
 
       const profileRes = await userApi.getProfile();
       if (!mounted) return;
 
       if (profileRes.success && profileRes.data?.user) {
+        // Token still valid — update user state from server
         setUser(profileRes.data.user);
+        setToken(localStorage.getItem("icr_token")); // may have been silently refreshed
         localStorage.setItem("icr_user", JSON.stringify(profileRes.data.user));
         setAuthCookie();
-      } else {
-        // Token might have expired — try silent refresh via httpOnly cookie
-        const refreshRes = await authApi.refresh();
-        if (!mounted) return;
-
-        if (refreshRes.success && refreshRes.data) {
-          setUser(refreshRes.data.user);
-          setToken(refreshRes.data.accessToken);
-          localStorage.setItem("icr_user", JSON.stringify(refreshRes.data.user));
-          localStorage.setItem("icr_token", refreshRes.data.accessToken);
-          setAuthCookie();
-        } else {
-          // Session expired or revoked
-          setUser(null);
-          setToken(null);
-          handleUnauthorized();
-        }
+        return;
       }
+
+      // Network error (no response, timeout, etc.) — don't log the user out
+      // over something transient. Keep the cached session and let them continue.
+      if (profileRes.error?.includes("Network error") || profileRes.error?.includes("fetch")) {
+        return;
+      }
+
+      // Token is invalid / expired and apiRequest's internal retry already ran.
+      // Try one explicit refresh as a last resort.
+      const refreshed = await tryRefreshToken();
+      if (!mounted) return;
+
+      if (refreshed) {
+        const newToken = localStorage.getItem("icr_token");
+        setToken(newToken);
+        // Re-fetch profile with the fresh token
+        const retryRes = await userApi.getProfile();
+        if (!mounted) return;
+        if (retryRes.success && retryRes.data?.user) {
+          setUser(retryRes.data.user);
+          localStorage.setItem("icr_user", JSON.stringify(retryRes.data.user));
+          setAuthCookie();
+        }
+        return;
+      }
+
+      // Refresh token is also gone or expired — the session is truly dead
+      setUser(null);
+      setToken(null);
+      handleUnauthorized();
     }
 
     syncSession();
@@ -89,6 +113,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
     };
   }, []);
+
+  // ── Auth actions ──
 
   const login = useCallback(async (phone: string, password: string) => {
     const res = await authApi.login(phone, password);
@@ -120,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await authApi.logout();
     } catch {
-      // ignore network errors on logout
+      // Ignore network errors on logout — local cleanup always runs
     }
     setUser(null);
     setToken(null);

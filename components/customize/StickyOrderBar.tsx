@@ -53,7 +53,7 @@ export default function StickyOrderBar({
         <button
           disabled={!isReady || loading}
           onClick={onPlaceOrder}
-          className={`flex items-center gap-2 px-5 py-3 rounded-sm shadow-md transition-all shrink-0 ${
+          className={`flex items-center gap-2 px-5 py-3 rounded-xl shadow-md transition-all shrink-0 ${
             isReady && !loading
               ? "hover:bg-[#c96a1f] active:bg-[#b85d1a]"
               : "opacity-50 cursor-not-allowed"
@@ -83,6 +83,7 @@ export default function StickyOrderBar({
                   src={ASSETS.iconArrow}
                   alt=""
                   fill
+                  sizes="12px"
                   style={{ filter: "brightness(0) invert(1)" }}
                   className="object-contain"
                   unoptimized

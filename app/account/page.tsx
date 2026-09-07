@@ -9,6 +9,7 @@ import { useCart } from "@/lib/cart";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { userApi, Address } from "@/lib/api";
+import { AccountSkeleton, AddressCardSkeleton } from "@/components/Skeleton";
 
 export default function AccountPage() {
   const router = useRouter();
@@ -28,6 +29,8 @@ export default function AccountPage() {
   const [loadingAddresses, setLoadingAddresses] = useState(false);
   const [showAddAddressModal, setShowAddAddressModal] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
+  // Inline delete confirmation per address id — avoids window.confirm()
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [newAddress, setNewAddress] = useState({
     label: "Home",
     line1: "",
@@ -134,11 +137,10 @@ export default function AccountPage() {
   }
 
   async function handleDeleteAddress(id: string) {
-    if (!confirm("Are you sure you want to remove this delivery address?")) return;
-
     const res = await userApi.deleteAddress(id);
     if (res.success) {
       setAddresses((prev) => prev.filter((a) => a.id !== id));
+      setConfirmDeleteId(null);
       showToast({ title: "Address removed", type: "info" });
     } else {
       showToast({ title: "Failed to remove address", type: "error" });
@@ -147,13 +149,9 @@ export default function AccountPage() {
 
   if (isLoading || !user) {
     return (
-      <div className="min-h-screen bg-[#faf7f2] flex items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div className="w-10 h-10 border-3 border-[#e07a28] border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-bold text-[#6e5c50] uppercase tracking-wider">
-            Loading Account...
-          </p>
-        </div>
+      <div className="min-h-screen bg-[#faf7f2] flex flex-col">
+        <header className="fixed top-0 left-0 right-0 z-40 h-14 sm:h-16 backdrop-blur-md bg-[rgba(250,247,242,0.96)] border-b border-[#e5ddd0]" />
+        <AccountSkeleton />
       </div>
     );
   }
@@ -216,6 +214,7 @@ export default function AccountPage() {
               src={ASSETS.logo}
               alt="ICR Studio"
               fill
+              sizes="112px"
               className="object-contain scale-[2.2]"
               priority
             />
@@ -227,7 +226,7 @@ export default function AccountPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-md sm:max-w-xl mx-auto px-4 sm:px-6 pt-18 sm:pt-22 w-full flex-1">
+      <main className="max-w-md sm:max-w-xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 w-full flex-1">
         {/* Personal Profile Summary */}
         <div className="flex items-center justify-between mb-5 pt-1">
           <div className="flex items-center gap-3.5">
@@ -386,8 +385,9 @@ export default function AccountPage() {
             </div>
 
             {loadingAddresses ? (
-              <div className="py-8 text-center text-xs text-[#8c786a] bg-white rounded-2xl border border-[#e8dfd2]">
-                Loading addresses...
+              <div className="flex flex-col gap-2.5">
+                <AddressCardSkeleton />
+                <AddressCardSkeleton />
               </div>
             ) : addresses.length === 0 ? (
               /* Warm artisanal empty state (No dashed upload box, single clean button) */
@@ -426,16 +426,35 @@ export default function AccountPage() {
                           </span>
                         )}
                       </div>
-                      <button
-                        onClick={() => handleDeleteAddress(addr.id)}
-                        className="text-[#a89989] hover:text-[#dc2626] transition-colors p-1 cursor-pointer"
-                        title="Remove address"
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                        </svg>
-                      </button>
+                      {/* Inline delete confirmation */}
+                      {confirmDeleteId === addr.id ? (
+                        <div className="flex items-center gap-1.5 text-[11px] font-sans">
+                          <span className="text-[#6e5c50]">Remove?</span>
+                          <button
+                            onClick={() => handleDeleteAddress(addr.id)}
+                            className="text-[#dc2626] font-bold hover:underline"
+                          >
+                            Yes
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="text-[#6e5c50] font-medium hover:underline"
+                          >
+                            No
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmDeleteId(addr.id)}
+                          className="text-[#a89989] hover:text-[#dc2626] transition-colors p-1 cursor-pointer"
+                          title="Remove address"
+                        >
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                        </button>
+                      )}
                     </div>
                     <p className="text-xs font-medium text-[#2e1e12] leading-relaxed">
                       {addr.line1}{addr.line2 ? `, ${addr.line2}` : ""}

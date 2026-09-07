@@ -55,8 +55,8 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
       {/* ── Fixed Header ─────────────────────────────────── */}
       <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md bg-[rgba(250,247,242,0.95)] border-b border-[#e5ddd0]">
         {/* ── Mobile header inner (default) ── Desktop header inner (lg+) ── */}
-        <div className="max-w-[1280px] mx-auto px-4 lg:px-8 h-16 flex items-center justify-between gap-4">
-          {/* Mobile hamburger + Logo group */}
+        <div className="max-w-[1280px] mx-auto px-4 lg:px-8 h-16 flex items-center justify-between gap-4 relative">
+          {/* Left: Mobile hamburger + Desktop Nav Links */}
           <div className="flex items-center gap-3">
             {/* Hamburger button */}
             <button
@@ -65,7 +65,7 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
               aria-expanded={sidebarOpen}
               aria-controls="sidebar-nav"
               onClick={() => setSidebarOpen(true)}
-              className="w-10 h-10 -ml-1 rounded-full flex items-center justify-center text-[#2e1e12] hover:text-[#e07a28] hover:bg-[#f2ebdc] active:bg-[#e8dccb] transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-[#e07a28] focus-visible:outline-offset-2"
+              className="w-10 h-10 -ml-1 rounded-full flex items-center justify-center text-[#2e1e12] hover:text-[#e07a28] hover:bg-[#f2ebdc] active:bg-[#e8dccb] transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-[#e07a28] focus-visible:outline-offset-2 lg:hidden"
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <line x1="3" y1="6" x2="21" y2="6" />
@@ -74,39 +74,59 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
               </svg>
             </button>
 
-            {/* Logo */}
-            <Link href="/" className="relative w-24 h-24 sm:w-12 sm:h-12 shrink-0 block">
+            {/* Desktop inline nav links — left group */}
+            <nav aria-label="Primary navigation" className="hidden lg:flex items-center gap-1">
+              {DESKTOP_NAV_LINKS.slice(0, 3).map((link) => (
+                <Link
+                  key={link.label}
+                  href={link.href}
+                  className="px-3.5 py-1.5 text-[#2e1e12] text-[13px] font-medium font-sans rounded-lg hover:bg-[#f2ebdc] hover:text-[#e07a28] transition-colors tracking-wide"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+
+          {/* Center: Logo aligned in middle with Tailwind size w-24 h-24 */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto flex items-center justify-center z-10">
+            <Link
+              href="/"
+              className="relative w-24 h-24 flex items-center justify-center shrink-0 block hover:opacity-90 transition-opacity"
+              aria-label="ICR Custom Creations Home"
+            >
               <Image
                 src={ASSETS.logo}
                 alt="ICR Custom Creations"
                 fill
-                className="object-contain object-center lg:object-left"
+                sizes="96px"
+                className="object-contain object-center"
                 priority
               />
             </Link>
           </div>
 
-          {/* Desktop inline nav — hidden on mobile */}
-          <nav aria-label="Primary navigation" className="hidden lg:flex items-center gap-1 flex-1 justify-center">
-            {DESKTOP_NAV_LINKS.map((link) => (
-              <Link
-                key={link.label}
-                href={link.href}
-                onClick={(e) => {
-                  if (link.href === "/orders" && !user) {
-                    e.preventDefault();
-                    router.push("/login?redirect=/orders");
-                  }
-                }}
-                className="px-4 py-2 text-[#2e1e12] text-[13px] font-medium font-sans rounded-lg hover:bg-[#f2ebdc] hover:text-[#e07a28] transition-colors tracking-wide"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </nav>
+          {/* Right actions: Desktop Secondary Nav + Account + Bag */}
+          <div className="flex items-center gap-2.5 ml-auto">
+            {/* Desktop right nav links (Order & Contact Us) */}
+            <nav aria-label="Secondary navigation" className="hidden lg:flex items-center gap-1">
+              {DESKTOP_NAV_LINKS.slice(3).map((link) => (
+                <Link
+                  key={link.label}
+                  href={link.href}
+                  onClick={(e) => {
+                    if (link.href === "/orders" && !user) {
+                      e.preventDefault();
+                      router.push("/login?redirect=/orders");
+                    }
+                  }}
+                  className="px-3 py-1.5 text-[#2e1e12] text-[13px] font-medium font-sans rounded-lg hover:bg-[#f2ebdc] hover:text-[#e07a28] transition-colors tracking-wide"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
 
-          {/* Right actions: Account + Bag */}
-          <div className="flex items-center gap-2.5 ml-auto lg:ml-0">
             {/* Desktop Account Button */}
             {user ? (
               <Link
@@ -175,6 +195,7 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
                 src={ASSETS.logo}
                 alt="ICR Logo"
                 fill
+                sizes="32px"
                 className="object-cover"
               />
             </div>

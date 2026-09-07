@@ -71,7 +71,7 @@ export default function TemplateSelector({ template, onChoose }: TemplateSelecto
         <button
           onClick={onChoose}
           style={{ backgroundColor: "#e07a28" }}
-          className="w-full hover:bg-[#c96a1f] active:bg-[#b85d1a] flex items-center justify-center gap-2 py-3 rounded-sm shadow-md transition-all"
+          className="w-full hover:bg-[#c96a1f] active:bg-[#b85d1a] flex items-center justify-center gap-2 py-3 rounded-xl shadow-md transition-all"
         >
           <span
             className="font-bold font-sans uppercase whitespace-nowrap"
@@ -84,6 +84,7 @@ export default function TemplateSelector({ template, onChoose }: TemplateSelecto
               src={ASSETS.iconArrow}
               alt=""
               fill
+              sizes="12px"
               style={{ filter: "brightness(0) invert(1)" }}
               className="object-contain"
               unoptimized
