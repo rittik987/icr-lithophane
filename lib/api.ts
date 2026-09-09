@@ -14,14 +14,19 @@ export interface User {
 export interface Address {
   id: string;
   userId: string;
+  recipientName?: string;
+  phone?: string;
+  alternatePhone?: string | null;
   label?: string | null;
   line1: string;
   line2?: string | null;
+  landmark?: string | null;
   city: string;
   state: string;
   pincode: string;
   isDefault: boolean;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface ApiResponse<T = unknown> {
@@ -41,9 +46,20 @@ export function getStoredToken(): string | null {
   return localStorage.getItem("icr_token");
 }
 
+export function getStoredRefreshToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("icr_refresh_token");
+}
+
+export function setStoredRefreshToken(token: string): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem("icr_refresh_token", token);
+}
+
 export function clearStoredAuth(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem("icr_token");
+  localStorage.removeItem("icr_refresh_token");
   localStorage.removeItem("icr_user");
   document.cookie = "icr_auth=; path=/; max-age=0; SameSite=Lax";
 }
@@ -61,16 +77,21 @@ export function handleUnauthorized(): void {
 }
 
 /**
- * Decode the JWT exp field and return true if it expires within the next 60 seconds.
- * Never throws — returns false on any parse error so requests still go through.
+ * Decode the JWT exp field and return true if it expires within the next 60 seconds,
+ * or if the token is invalid/corrupt.
  */
-function isTokenExpiringSoon(token: string): boolean {
+export function isTokenExpiringSoon(token: string): boolean {
   try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
+    if (!token || typeof token !== "string") return true;
+    const parts = token.split(".");
+    if (parts.length !== 3) return true;
+    const payload = JSON.parse(atob(parts[1]));
+    if (typeof payload.exp !== "number") return true;
     // exp is in seconds; add a 60-second buffer so we refresh before the actual expiry
-    return typeof payload.exp === "number" && payload.exp * 1000 < Date.now() + 60_000;
+    return payload.exp * 1000 < Date.now() + 60_000;
   } catch {
-    return false;
+    // Corrupt or invalid token -> treat as expired so it gets refreshed
+    return true;
   }
 }
 
@@ -84,10 +105,12 @@ let _refreshPromise: Promise<boolean> | null = null;
 
 async function executeRefresh(): Promise<boolean> {
   try {
+    const storedRefreshToken = getStoredRefreshToken();
     const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
       method: "POST",
-      credentials: "include", // send httpOnly refreshToken cookie
+      credentials: "include", // send httpOnly refreshToken cookie if available
       headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken: storedRefreshToken }),
     });
 
     if (!res.ok) return false;
@@ -95,9 +118,16 @@ async function executeRefresh(): Promise<boolean> {
     const data = await res.json();
     if (data?.success && data?.data?.accessToken) {
       localStorage.setItem("icr_token", data.data.accessToken);
+      if (data.data.refreshToken) {
+        localStorage.setItem("icr_refresh_token", data.data.refreshToken);
+      }
       if (data.data.user) {
         localStorage.setItem("icr_user", JSON.stringify(data.data.user));
       }
+      if (typeof document !== "undefined") {
+        document.cookie = "icr_auth=1; path=/; max-age=2592000; SameSite=Lax";
+      }
+      isRedirectingToLogin = false;
       return true;
     }
     return false;
@@ -106,13 +136,40 @@ async function executeRefresh(): Promise<boolean> {
   }
 }
 
+async function executeRefreshWithLock(): Promise<boolean> {
+  const tokenBeforeLock = getStoredToken();
+
+  // If Web Locks API is available (all modern browsers), coordinate across tabs
+  if (typeof navigator !== "undefined" && navigator.locks?.request) {
+    try {
+      return await navigator.locks.request("icr_auth_refresh_lock", async () => {
+        // Double-check: if another tab refreshed the token while we were waiting,
+        // the stored token will have changed to a new, fresh one.
+        const currentToken = getStoredToken();
+        if (
+          currentToken &&
+          currentToken !== tokenBeforeLock &&
+          !isTokenExpiringSoon(currentToken)
+        ) {
+          return true;
+        }
+        return await executeRefresh();
+      });
+    } catch {
+      return await executeRefresh();
+    }
+  }
+
+  return await executeRefresh();
+}
+
 /**
  * Attempt a silent token refresh. Concurrent callers share the same promise
- * so only one refresh request is ever in-flight at a time.
+ * and coordinate across tabs via Web Locks so only one refresh request is ever in-flight.
  */
 export function tryRefreshToken(): Promise<boolean> {
   if (!_refreshPromise) {
-    _refreshPromise = executeRefresh().finally(() => {
+    _refreshPromise = executeRefreshWithLock().finally(() => {
       _refreshPromise = null;
     });
   }
@@ -202,28 +259,39 @@ export async function apiRequest<T>(
 
 export const authApi = {
   async register(phone: string, password: string, name: string) {
-    return apiRequest<{ accessToken: string; user: User }>("/auth/register", {
+    return apiRequest<{ accessToken: string; refreshToken?: string; user: User }>("/auth/register", {
       method: "POST",
       body: JSON.stringify({ phone, password, name }),
     });
   },
 
   async login(phone: string, password: string) {
-    return apiRequest<{ accessToken: string; user: User }>("/auth/login", {
+    return apiRequest<{ accessToken: string; refreshToken?: string; user: User }>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ phone, password }),
     });
   },
 
   async refresh() {
-    return apiRequest<{ accessToken: string; user: User }>("/auth/refresh", {
+    const storedRefreshToken = getStoredRefreshToken();
+    return apiRequest<{ accessToken: string; refreshToken?: string; user: User }>("/auth/refresh", {
       method: "POST",
+      body: JSON.stringify({ refreshToken: storedRefreshToken }),
     });
   },
 
   async logout() {
+    const userStr = typeof window !== "undefined" ? localStorage.getItem("icr_user") : null;
+    let userId: string | undefined;
+    try {
+      if (userStr) userId = JSON.parse(userStr)?.id;
+    } catch {
+      // ignore JSON parse error
+    }
+
     return apiRequest<void>("/auth/logout", {
       method: "POST",
+      body: JSON.stringify({ userId }),
     });
   },
 };
@@ -340,9 +408,11 @@ export interface RazorpayOrderDetails {
 export interface InlineAddress {
   fullName: string;
   phone: string;
+  alternatePhone?: string;
   email?: string;
   line1: string;
   line2?: string;
+  landmark?: string;
   city: string;
   state: string;
   pincode: string;
@@ -378,10 +448,13 @@ export interface OrderItemDetail {
 
 export interface OrderShippingAddress {
   fullName?: string;
+  recipientName?: string;
   phone?: string;
+  alternatePhone?: string | null;
   email?: string;
   line1: string;
   line2?: string | null;
+  landmark?: string | null;
   city: string;
   state: string;
   pincode: string;
@@ -393,6 +466,10 @@ export interface ServerOrder {
   subtotal: number;       // in paise
   discountAmount: number; // in paise
   finalAmount: number;    // in paise
+  paymentType?: "FULL_ONLINE" | "PARTIAL_COD";
+  advanceAmount?: number; // in paise
+  shippingCharge?: number;// in paise
+  balanceDue?: number;    // in paise
   items: OrderItemDetail[];
   shippingAddress: OrderShippingAddress;
   courierName?: string | null;
@@ -412,6 +489,12 @@ export interface ServerOrder {
     amount?: number;
     createdAt?: string;
   } | null;
+  reviews?: {
+    id: string;
+    rating: number;
+    comment: string;
+    title?: string | null;
+  }[];
   notes?: string | null;
   createdAt: string;
   updatedAt?: string;
@@ -465,12 +548,31 @@ export const cartApi = {
 // COUPON API
 // ─────────────────────────────────────────────────────────
 
+export interface AvailableCoupon {
+  id: string;
+  code: string;
+  description: string | null;
+  discountType: "PERCENTAGE" | "FIXED_AMOUNT";
+  discountValue: number;
+  minOrderAmount: number; // in paise
+  maxDiscount: number | null; // in paise
+  expiresAt: string | null;
+  isUsedByUser?: boolean;
+}
+
 export const couponApi = {
   /** Validate coupon — subtotal in paise */
   async validate(code: string, subtotal: number) {
     return apiRequest<CouponValidation>("/coupons/validate", {
       method: "POST",
       body: JSON.stringify({ code, subtotal }),
+    });
+  },
+
+  /** List active available coupons for customers */
+  async listAvailable() {
+    return apiRequest<{ coupons: AvailableCoupon[] }>("/coupons/available", {
+      method: "GET",
     });
   },
 };
@@ -487,6 +589,7 @@ export const orderApi = {
     couponCode?: string;
     notes?: string;
     paymentMethod?: "upi" | "card" | "netbanking" | "wallet";
+    paymentType?: "FULL_ONLINE" | "PARTIAL_COD";
   }) {
     return apiRequest<{ order: ServerOrder; razorpay: RazorpayOrderDetails }>("/orders", {
       method: "POST",
@@ -512,6 +615,23 @@ export const orderApi = {
 
   async getOrder(id: string) {
     return apiRequest<{ order: ServerOrder }>(`/orders/${id}`);
+  },
+
+  /** Submit rating and review for delivered order */
+  async submitReview(
+    id: string,
+    data: {
+      rating: number;
+      comment: string;
+      title?: string;
+      reviewerName?: string;
+      location?: string;
+    }
+  ) {
+    return apiRequest<{ review: unknown }>(`/orders/${id}/review`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   },
 };
 
@@ -592,6 +712,76 @@ export const uploadApi = {
       return data as { success: boolean; uploaded: number; assets: UploadedAsset[]; failed?: { name: string; error: string }[] };
     } catch (err) {
       return { success: false, uploaded: 0, assets: [], error: String(err) };
+    }
+  },
+};
+
+// ─────────────────────────────────────────────────────────
+// PRODUCT API
+// ─────────────────────────────────────────────────────────
+
+export interface ProductMedia {
+  id: string;
+  productId: string;
+  type: "IMAGE" | "VIDEO" | "GIF";
+  url: string;
+  publicId?: string | null;
+  thumbnailUrl?: string | null;
+  altText?: string | null;
+  caption?: string | null;
+  displayOrder: number;
+  isPrimary: boolean;
+}
+
+export interface StorefrontProduct {
+  id: string;
+  slug: string;
+  sku: string;
+  name: string;
+  productType?: string;
+  tagline?: string | null;
+  description?: string | null;
+  mrp: number; // in paise
+  sellingPrice: number; // in paise
+  stock?: number;
+  discountBadge?: string | null;
+  discountPercent?: number;
+  computedDiscountBadge?: string;
+  whatsIncluded?: string[];
+  highlights?: string[];
+  status: "ACTIVE" | "DRAFT" | "ARCHIVED";
+  isFeatured?: boolean;
+  media?: ProductMedia[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export const productApi = {
+  async getActiveProduct(): Promise<StorefrontProduct | null> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/products/active`, {
+        cache: "no-store",
+      });
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json.data?.product || null;
+    } catch (err) {
+      console.error("Failed to fetch active product:", err);
+      return null;
+    }
+  },
+
+  async getProductBySlug(slug: string): Promise<StorefrontProduct | null> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/products/${slug}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json.data?.product || null;
+    } catch (err) {
+      console.error(`Failed to fetch product by slug (${slug}):`, err);
+      return null;
     }
   },
 };

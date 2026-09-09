@@ -6,7 +6,9 @@ import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { ASSETS } from "@/lib/assets";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/lib/cart";
 import { orderApi, ServerOrder } from "@/lib/api";
+import { OrderDetailSkeleton } from "@/components/Skeleton";
 
 function formatRupees(paiseOrRupees: number): string {
   const rupees = paiseOrRupees > 50000 ? Math.round(paiseOrRupees / 100) : paiseOrRupees;
@@ -40,11 +42,21 @@ export default function OrderDetailsPage() {
 
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
+  const { totalCount } = useCart();
 
   const [order, setOrder] = useState<ServerOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [copiedId, setCopiedId] = useState(false);
+
+  // Review State for Delivered orders
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewTitle, setReviewTitle] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewSuccess, setReviewSuccess] = useState(false);
+  const [reviewError, setReviewError] = useState("");
+  const [isEditingReview, setIsEditingReview] = useState(false);
 
   // In-App Photo Modal with warm brand schema (NO BLACK BACKGROUND)
   const [activePhoto, setActivePhoto] = useState<ModalPhotoState | null>(null);
@@ -109,27 +121,47 @@ export default function OrderDetailsPage() {
     setTimeout(() => setCopiedId(false), 2000);
   };
 
-  if (isAuthLoading || !user) {
-    return (
-      <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div className="w-8 h-8 border-2 border-[#D47124] border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-semibold tracking-wider text-[#786F66] uppercase font-sans">
-            Loading Account...
-          </p>
-        </div>
-      </div>
-    );
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!orderId || !reviewComment.trim()) return;
+    setIsSubmittingReview(true);
+    setReviewError("");
+    try {
+      const res = await orderApi.submitReview(orderId, {
+        rating: reviewRating,
+        title: reviewTitle.trim() || undefined,
+        comment: reviewComment.trim(),
+        reviewerName: user?.name,
+      });
+      if (res.success) {
+        setReviewSuccess(true);
+        setIsEditingReview(false);
+        const updatedOrder = await orderApi.getOrder(orderId);
+        if (updatedOrder.success && updatedOrder.data?.order) {
+          setOrder(updatedOrder.data.order);
+        }
+      } else {
+        setReviewError(res.error || "Failed to submit review.");
+      }
+    } catch (err) {
+      setReviewError(err instanceof Error ? err.message : "Failed to submit review.");
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
+  if (isAuthLoading || !user || isLoading) {
+    return <OrderDetailSkeleton />;
   }
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#1A1412] flex flex-col font-sans antialiased selection:bg-[#FED7AA] selection:text-[#92400E]">
       {/* ── Precision Header ─────────────────────────────────── */}
       <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-xl bg-[#FAF9F6]/90 border-b border-[#EAE4DC] transition-all">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link
             href="/orders"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#6B6059] hover:text-[#1A1412] transition-colors py-1.5 px-2.5 -ml-2 rounded-lg hover:bg-black/[0.03]"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#6B6059] hover:text-[#1A1412] transition-colors py-1.5 px-2.5 -ml-2 rounded-lg hover:bg-black/[0.03] z-10"
           >
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
               <path
@@ -143,22 +175,47 @@ export default function OrderDetailsPage() {
             <span>Orders</span>
           </Link>
 
-          <Link href="/" className="relative w-12 h-9 shrink-0 opacity-95 hover:opacity-100 transition-opacity">
-            <Image
-              src={ASSETS.logo}
-              alt="ICR Custom Creations"
-              fill
-              sizes="48px"
-              className="object-contain"
-              priority
-            />
-          </Link>
+          {/* Center: Logo */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto flex items-center justify-center">
+            <Link
+              href="/"
+              className="relative w-24 h-24 flex items-center justify-center shrink-0 block hover:opacity-90 transition-opacity"
+              aria-label="ICR Custom Creations Home"
+            >
+              <Image
+                src={ASSETS.logo}
+                alt="ICR Custom Creations"
+                fill
+                sizes="96px"
+                className="object-contain object-center"
+                priority
+              />
+            </Link>
+          </div>
 
           <Link
             href="/cart"
-            className="text-xs font-bold text-[#D47124] hover:text-[#BA5D17] transition-colors py-1.5 px-2.5 -mr-2 rounded-lg hover:bg-[#D47124]/5"
+            aria-label={`View cart, ${totalCount} items`}
+            className="relative w-10 h-10 -mr-1 rounded-full flex items-center justify-center text-[#2e1e12] hover:text-[#e07a28] hover:bg-[#f2ebdc] active:bg-[#e8dccb] transition-all cursor-pointer z-10"
           >
-            Bag
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <path d="M16 10a4 4 0 0 1-8 0" />
+            </svg>
+            <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#e07a28] text-white text-[10px] font-bold font-sans flex items-center justify-center leading-none shadow-xs border-2 border-[#faf7f2]">
+              {totalCount}
+            </span>
           </Link>
         </div>
       </header>
@@ -471,17 +528,44 @@ export default function OrderDetailsPage() {
                       </div>
                     )}
 
-                    <div className="flex sm:justify-end gap-2 text-[#5C534E]">
-                      <span>Shipping:</span>
-                      <span className="font-semibold text-[#047857]">Complimentary</span>
-                    </div>
+                    {order.paymentType === "PARTIAL_COD" ? (
+                      <>
+                        <div className="flex sm:justify-end gap-2 text-[#5C534E]">
+                          <span>Courier Handling (COD):</span>
+                          <span className="font-semibold text-[#1A1412]">
+                            {formatRupees(order.shippingCharge || 7000)}
+                          </span>
+                        </div>
+                        <div className="flex sm:justify-end gap-2 text-[#047857]">
+                          <span>Advance Paid Online:</span>
+                          <span className="font-semibold">
+                            {formatRupees(
+                              (order.advanceAmount || 50000) + (order.shippingCharge || 7000)
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex sm:justify-end gap-2 text-sm font-bold text-[#1A1412] pt-2 mt-1 border-t border-[#F0EAE1]">
+                          <span>Balance on Delivery:</span>
+                          <span className="text-[#D47124] text-base font-bold">
+                            {formatRupees(order.balanceDue || 0)}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex sm:justify-end gap-2 text-[#5C534E]">
+                          <span>Shipping:</span>
+                          <span className="font-semibold text-[#047857]">Complimentary</span>
+                        </div>
 
-                    <div className="flex sm:justify-end gap-2 text-sm font-bold text-[#1A1412] pt-2 mt-1 border-t border-[#F0EAE1]">
-                      <span>Total Paid:</span>
-                      <span className="text-[#D47124] text-base font-bold">
-                        {formatRupees(order.finalAmount)}
-                      </span>
-                    </div>
+                        <div className="flex sm:justify-end gap-2 text-sm font-bold text-[#1A1412] pt-2 mt-1 border-t border-[#F0EAE1]">
+                          <span>Total Paid:</span>
+                          <span className="text-[#D47124] text-base font-bold">
+                            {formatRupees(order.finalAmount)}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {order.payment && (
@@ -490,8 +574,9 @@ export default function OrderDetailsPage() {
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                       </svg>
                       <span>
-                        {order.payment.status === "CAPTURED" ? "Verified Paid" : order.payment.status} via{" "}
-                        {order.payment.method?.toUpperCase() || "Razorpay"}
+                        {order.paymentType === "PARTIAL_COD"
+                          ? `Advance Verified via ${order.payment.method?.toUpperCase() || "UPI/Card"} · Balance on Delivery`
+                          : `${order.payment.status === "CAPTURED" ? "Verified Paid" : order.payment.status} via ${order.payment.method?.toUpperCase() || "Razorpay"}`}
                       </span>
                     </div>
                   )}
@@ -508,6 +593,176 @@ export default function OrderDetailsPage() {
                 </div>
               )}
             </article>
+
+            {/* ── Delivered Order Review & Rating Card ── */}
+            {order.status === "DELIVERED" && (
+              <section className="bg-white border border-[#EAE4DC] rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-[0_4px_24px_-4px_rgba(46,30,18,0.04)] flex flex-col gap-5">
+                <div className="flex items-center justify-between pb-4 border-b border-[#F0EAE1]">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#FEF3C7] text-[#D97706] flex items-center justify-center shrink-0">
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-serif font-bold text-base sm:text-lg text-[#1A1412]">
+                        Rate & Review Your Keepsake
+                      </h3>
+                      <p className="text-xs text-[#786F66]">
+                        Your feedback helps other buyers and lets our 3D artisans improve.
+                      </p>
+                    </div>
+                  </div>
+                  {order.reviews && order.reviews.length > 0 && !isEditingReview && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const existing = order.reviews![0];
+                        setReviewRating(existing.rating);
+                        setReviewTitle(existing.title || "");
+                        setReviewComment(existing.comment || "");
+                        setIsEditingReview(true);
+                      }}
+                      className="text-xs font-semibold text-[#D47124] hover:underline cursor-pointer"
+                    >
+                      Edit Review
+                    </button>
+                  )}
+                </div>
+
+                {order.reviews && order.reviews.length > 0 && !isEditingReview ? (
+                  <div className="bg-[#FAF8F5] border border-[#EAE4DC] rounded-2xl p-5 flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 text-[#F59E0B]">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <svg
+                            key={star}
+                            className={`w-5 h-5 ${star <= order.reviews![0].rating ? "fill-current" : "text-gray-300 fill-current"}`}
+                            viewBox="0 0 20 20"
+                          >
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                        ))}
+                      </div>
+                      <span className="text-xs font-bold text-[#1A1412]">
+                        {order.reviews[0].rating} out of 5 stars
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-[#DCFCE7] text-[#166534] px-2 py-0.5 rounded-full ml-auto">
+                        Verified Purchase
+                      </span>
+                    </div>
+                    {order.reviews[0].title && (
+                      <h4 className="font-bold text-sm text-[#1A1412]">{order.reviews[0].title}</h4>
+                    )}
+                    <p className="text-xs text-[#5C534E] leading-relaxed italic">
+                      &ldquo;{order.reviews[0].comment}&rdquo;
+                    </p>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmitReview} className="flex flex-col gap-4">
+                    {reviewSuccess && (
+                      <div className="bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46] text-xs p-3.5 rounded-xl font-medium">
+                        Thank you! Your review has been successfully submitted.
+                      </div>
+                    )}
+                    {reviewError && (
+                      <div className="bg-[#FEF2F2] border border-[#FCA5A5] text-[#991B1B] text-xs p-3.5 rounded-xl font-medium">
+                        {reviewError}
+                      </div>
+                    )}
+
+                    {/* Star selector */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-[#1A1412]">
+                        Overall Rating
+                      </label>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              type="button"
+                              key={star}
+                              onClick={() => setReviewRating(star)}
+                              className="p-1 hover:scale-115 transition-transform focus:outline-hidden cursor-pointer"
+                            >
+                              <svg
+                                className={`w-7 h-7 ${
+                                  star <= reviewRating ? "text-[#F59E0B] fill-[#F59E0B]" : "text-gray-300 fill-gray-200"
+                                }`}
+                                viewBox="0 0 20 20"
+                              >
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                              </svg>
+                            </button>
+                          ))}
+                        </div>
+                        <span className="text-xs font-semibold text-[#786F66]">
+                          {reviewRating === 5
+                            ? "5/5 · Excellent!"
+                            : reviewRating === 4
+                            ? "4/5 · Very Good"
+                            : reviewRating === 3
+                            ? "3/5 · Average"
+                            : reviewRating === 2
+                            ? "2/5 · Below Expectation"
+                            : "1/5 · Poor"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Headline */}
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="review-title" className="text-xs font-bold text-[#1A1412]">
+                        Review Headline (Optional)
+                      </label>
+                      <input
+                        id="review-title"
+                        type="text"
+                        value={reviewTitle}
+                        onChange={(e) => setReviewTitle(e.target.value)}
+                        placeholder="e.g. Stunning craftsmanship, warm glow!"
+                        className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[#EAE4DC] focus:outline-hidden focus:border-[#D47124] focus:ring-2 focus:ring-[#D47124]/15 bg-[#FAF8F5]"
+                      />
+                    </div>
+
+                    {/* Review text */}
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="review-comment" className="text-xs font-bold text-[#1A1412]">
+                        Detailed Review <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        id="review-comment"
+                        rows={3}
+                        required
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                        placeholder="What did you love about your personalized lithophane lamp? How was the light quality and packaging?"
+                        className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[#EAE4DC] focus:outline-hidden focus:border-[#D47124] focus:ring-2 focus:ring-[#D47124]/15 bg-[#FAF8F5] resize-none"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-1">
+                      <button
+                        type="submit"
+                        disabled={isSubmittingReview || !reviewComment.trim()}
+                        className="bg-[#D47124] hover:bg-[#BA5D17] disabled:opacity-50 text-white text-xs font-bold uppercase tracking-wider px-5 py-3 rounded-xl transition-all shadow-xs cursor-pointer"
+                      >
+                        {isSubmittingReview ? "Submitting..." : "Submit Review"}
+                      </button>
+                      {isEditingReview && (
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingReview(false)}
+                          className="text-xs font-semibold text-[#786F66] hover:text-[#1A1412] cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </form>
+                )}
+              </section>
+            )}
           </div>
         )}
       </main>

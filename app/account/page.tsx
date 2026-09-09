@@ -48,6 +48,26 @@ export default function AccountPage() {
     }
   }, [isLoading, user, router]);
 
+  // Handle pull-to-refresh
+  const [isPullRefreshing, setIsPullRefreshing] = useState(false);
+  useEffect(() => {
+    function handlePullRefresh() {
+      setIsPullRefreshing(true);
+      if (user) {
+        userApi.getAddresses().then((res) => {
+          if (res.success && res.data?.addresses) {
+            setAddresses(res.data.addresses);
+          }
+        });
+      }
+      setTimeout(() => {
+        setIsPullRefreshing(false);
+      }, 700);
+    }
+    window.addEventListener("app:pulled-to-refresh", handlePullRefresh);
+    return () => window.removeEventListener("app:pulled-to-refresh", handlePullRefresh);
+  }, [user]);
+
   // Load addresses
   useEffect(() => {
     if (user) {
@@ -147,7 +167,7 @@ export default function AccountPage() {
     }
   }
 
-  if (isLoading || !user) {
+  if (isLoading || !user || isPullRefreshing) {
     return (
       <div className="min-h-screen bg-[#faf7f2] flex flex-col">
         <header className="fixed top-0 left-0 right-0 z-40 h-14 sm:h-16 backdrop-blur-md bg-[rgba(250,247,242,0.96)] border-b border-[#e5ddd0]" />
@@ -169,7 +189,7 @@ export default function AccountPage() {
     <div className="min-h-screen bg-[#faf7f2] text-[#2e1e12] flex flex-col pb-16">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md bg-[rgba(250,247,242,0.96)] border-b border-[#e5ddd0]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
           {/* Left: Subtle back link */}
           <button
             type="button"
@@ -185,7 +205,7 @@ export default function AccountPage() {
                 router.replace("/");
               }
             }}
-            className="flex items-center gap-1.5 text-xs font-medium text-[#6e5c50] hover:text-[#2e1e12] transition-colors cursor-pointer group py-1.5"
+            className="flex items-center gap-1.5 text-xs font-medium text-[#6e5c50] hover:text-[#2e1e12] transition-colors cursor-pointer group py-1.5 z-10"
             aria-label="Go back"
           >
             <svg
@@ -204,21 +224,23 @@ export default function AccountPage() {
             <span>Back</span>
           </button>
 
-          {/* Center: Brand emblem with crisp zoom */}
-          <Link
-            href="/"
-            className="relative w-28 h-8 sm:h-9 shrink-0 flex items-center justify-center overflow-hidden hover:opacity-90 transition-opacity"
-            aria-label="ICR Studio Home"
-          >
-            <Image
-              src={ASSETS.logo}
-              alt="ICR Studio"
-              fill
-              sizes="112px"
-              className="object-contain scale-[2.2]"
-              priority
-            />
-          </Link>
+          {/* Center: Logo */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto flex items-center justify-center">
+            <Link
+              href="/"
+              className="relative w-24 h-24 flex items-center justify-center shrink-0 block hover:opacity-90 transition-opacity"
+              aria-label="ICR Studio Home"
+            >
+              <Image
+                src={ASSETS.logo}
+                alt="ICR Studio"
+                fill
+                sizes="96px"
+                className="object-contain object-center"
+                priority
+              />
+            </Link>
+          </div>
 
           {/* Right: Balanced spacing matching back button */}
           <div className="w-12" aria-hidden="true" />
@@ -312,7 +334,7 @@ export default function AccountPage() {
                 </svg>
               </div>
               <div>
-                <div className="text-xs font-semibold text-[#2e1e12]">Shopping Bag</div>
+                <div className="text-xs font-semibold text-[#2e1e12]">Shopping Cart</div>
                 <div className="text-[10px] text-[#8c786a]">{totalCount} {totalCount === 1 ? "item" : "items"} saved</div>
               </div>
             </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { TemplateConfig } from "./templates";
 import { fileToCompressedDataUrl, generateLithophanePreview } from "./exportPreview";
-import { cartApi, uploadApi, getStoredToken } from "./api";
+import { cartApi, uploadApi, getStoredToken, productApi } from "./api";
 
 export const CART_STORAGE_KEY = "icr_lithophane_cart";
 export const CART_EVENT_NAME = "icr_cart_updated";
@@ -63,8 +63,32 @@ export async function buildCartItemPayload(
   template: TemplateConfig,
   uploadedFiles: Record<string, File>,
   textValues: Record<string, string>,
-  customPreviewDataUrl?: string
+  customPreviewDataUrl?: string,
+  prices?: { sellingPrice?: number; mrp?: number }
 ): Promise<Omit<CartItem, "id" | "createdAt">> {
+  // Dynamically resolve pricing
+  let itemPrice = prices?.sellingPrice;
+  let itemOriginalPrice = prices?.mrp;
+
+  if (itemPrice === undefined || itemOriginalPrice === undefined) {
+    try {
+      const activeProd = await productApi.getActiveProduct();
+      if (activeProd) {
+        if (itemPrice === undefined && activeProd.sellingPrice !== undefined) {
+          itemPrice = Math.round(activeProd.sellingPrice / 100);
+        }
+        if (itemOriginalPrice === undefined && activeProd.mrp !== undefined) {
+          itemOriginalPrice = Math.round(activeProd.mrp / 100);
+        }
+      }
+    } catch {
+      // Ignore network errors and fallback safely
+    }
+  }
+
+  const resolvedPrice = itemPrice ?? 2999;
+  const resolvedOriginalPrice = itemOriginalPrice ?? 4999;
+
   // 1. Generate composite preview if not provided
   let preview = customPreviewDataUrl;
   if (!preview) {
@@ -146,8 +170,8 @@ export async function buildCartItemPayload(
     templateName: template.name,
     previewDataUrl: previewCloudinaryUrl || preview,
     previewUrl: previewCloudinaryUrl,
-    price: 2999,
-    originalPrice: 4999,
+    price: resolvedPrice,
+    originalPrice: resolvedOriginalPrice,
     quantity: 1,
     photos,
     texts,
@@ -207,12 +231,12 @@ export function addToCart(item: Omit<CartItem, "id" | "createdAt">): CartItem {
         quantity: newItem.quantity || 1,
         unitPrice: Math.round(newItem.price * 100),
         originalPrice: Math.round(newItem.originalPrice * 100),
-        previewUrl: newItem.previewUrl || (newItem.previewDataUrl.startsWith("http") ? newItem.previewDataUrl : undefined),
+        previewUrl: newItem.previewUrl || newItem.previewDataUrl,
         photos: Object.values(newItem.photos).map((p) => ({
           slotId: p.slotId,
           slotLabel: p.slotLabel,
           cloudinaryId: p.cloudinaryId || "photo",
-          url: p.url && p.url.startsWith("http") ? p.url : "https://res.cloudinary.com/icr/placeholder.jpg",
+          url: p.url || p.dataUrl,
           fileName: p.fileName,
           aspectHint: p.aspectHint,
           cmLabel: p.cmLabel,
@@ -314,12 +338,12 @@ export async function syncCartWithServer(localItems?: CartItem[], force = false)
           quantity: item.quantity || 1,
           unitPrice: Math.round(item.price * 100),
           originalPrice: Math.round(item.originalPrice * 100),
-          previewUrl: item.previewUrl || (item.previewDataUrl.startsWith("http") ? item.previewDataUrl : undefined),
+          previewUrl: item.previewUrl || item.previewDataUrl,
           photos: Object.values(item.photos).map((p) => ({
             slotId: p.slotId,
             slotLabel: p.slotLabel,
             cloudinaryId: p.cloudinaryId || "photo",
-            url: p.url && p.url.startsWith("http") ? p.url : "https://res.cloudinary.com/icr/placeholder.jpg",
+            url: p.url || p.dataUrl,
             fileName: p.fileName,
             aspectHint: p.aspectHint,
             cmLabel: p.cmLabel,
@@ -345,12 +369,12 @@ export async function syncCartWithServer(localItems?: CartItem[], force = false)
           quantity: item.quantity || 1,
           unitPrice: Math.round(item.price * 100),
           originalPrice: Math.round(item.originalPrice * 100),
-          previewUrl: item.previewUrl || (item.previewDataUrl.startsWith("http") ? item.previewDataUrl : undefined),
+          previewUrl: item.previewUrl || item.previewDataUrl,
           photos: Object.values(item.photos).map((p) => ({
             slotId: p.slotId,
             slotLabel: p.slotLabel,
             cloudinaryId: p.cloudinaryId || "photo",
-            url: p.url && p.url.startsWith("http") ? p.url : "https://res.cloudinary.com/icr/placeholder.jpg",
+            url: p.url || p.dataUrl,
             fileName: p.fileName,
             aspectHint: p.aspectHint,
             cmLabel: p.cmLabel,
@@ -375,6 +399,32 @@ export function useCart() {
     const loaded = getCart();
     setItems(loaded);
     setIsLoaded(true);
+
+    // Refresh item prices against active backend product to ensure live interactive pricing
+    productApi
+      .getActiveProduct()
+      .then((activeProd) => {
+        if (!activeProd) return;
+        const currentPrice = Math.round(activeProd.sellingPrice / 100);
+        const currentMrp = Math.round(activeProd.mrp / 100);
+        const currentCart = getCart();
+        let hasPriceDiff = false;
+        const refreshedCart = currentCart.map((item) => {
+          if (item.price !== currentPrice || item.originalPrice !== currentMrp) {
+            hasPriceDiff = true;
+            return {
+              ...item,
+              price: currentPrice,
+              originalPrice: currentMrp,
+            };
+          }
+          return item;
+        });
+        if (hasPriceDiff) {
+          saveCart(refreshedCart);
+        }
+      })
+      .catch(() => {});
 
     // Sync in background if authenticated
     if (getStoredToken() && loaded.length > 0) {

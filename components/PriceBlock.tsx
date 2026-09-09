@@ -4,10 +4,42 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ASSETS } from "@/lib/assets";
 import { useAuth } from "@/context/AuthContext";
+import { StorefrontProduct } from "@/lib/api";
 
-export default function PriceBlock() {
+interface PriceBlockProps {
+  product?: StorefrontProduct | null;
+}
+
+export default function PriceBlock({ product }: PriceBlockProps) {
   const router = useRouter();
   const { user } = useAuth();
+
+  const sellingPrice =
+    product?.sellingPrice !== undefined
+      ? Math.round(product.sellingPrice / 100)
+      : 2999;
+  const mrp =
+    product?.mrp !== undefined ? Math.round(product.mrp / 100) : 4999;
+
+  const discountPercent =
+    mrp > sellingPrice && mrp > 0
+      ? Math.round(((mrp - sellingPrice) / mrp) * 100)
+      : 0;
+
+  const discountBadge =
+    discountPercent > 0
+      ? (product?.computedDiscountBadge || product?.discountBadge || `SAVE ${discountPercent}% OFF`)
+      : null;
+
+  const whatsIncluded =
+    product?.whatsIncluded && product.whatsIncluded.length > 0
+      ? product.whatsIncluded
+      : [
+          "Custom lithophane in solid walnut frame",
+          "USB-C cable & power adapter",
+          "Gift-ready packaging",
+          "Free pan-India delivery",
+        ];
 
   function handleOrderClick() {
     if (!user) {
@@ -24,11 +56,13 @@ export default function PriceBlock() {
         <div className="flex flex-col gap-1">
           <div className="flex items-baseline gap-2 leading-none">
             <span className="text-[#2e1e12] text-[28px] font-bold leading-none font-sans">
-              ₹2,999
+              ₹{sellingPrice.toLocaleString("en-IN")}
             </span>
-            <span className="text-[#6e5c50] text-sm line-through font-sans">
-              MRP ₹4,999
-            </span>
+            {mrp > 0 && (
+              <span className="text-[#6e5c50] text-sm line-through font-sans">
+                MRP ₹{mrp.toLocaleString("en-IN")}
+              </span>
+            )}
           </div>
           <p className="text-[#6e5c50] text-[11px] font-medium mt-1 font-sans">
             All taxes &amp; pan-India courier included
@@ -36,11 +70,13 @@ export default function PriceBlock() {
         </div>
 
         {/* Discount badge */}
-        <div className="bg-[#eaf5ec] border border-[#c6e6ca] rounded px-3 py-1.5 shrink-0">
-          <span className="text-[#1e7234] text-xs font-bold tracking-wider uppercase font-sans">
-            SAVE 40% OFF
-          </span>
-        </div>
+        {discountBadge && (
+          <div className="bg-[#eaf5ec] border border-[#c6e6ca] rounded px-3 py-1.5 shrink-0">
+            <span className="text-[#1e7234] text-xs font-bold tracking-wider uppercase font-sans">
+              {discountBadge}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Desktop Order CTA Button — guarded */}
@@ -59,12 +95,7 @@ export default function PriceBlock() {
       <div className="flex flex-col gap-1.5">
         <p className="text-[#6e5c50] text-[12px] font-sans font-medium">What&apos;s included:</p>
         <ul className="flex flex-col gap-1">
-          {[
-            "Custom lithophane in solid walnut frame",
-            "USB-C cable & power adapter",
-            "Gift-ready packaging",
-            "Free pan-India delivery",
-          ].map((item) => (
+          {whatsIncluded.map((item) => (
             <li key={item} className="flex items-center gap-2">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                 <circle cx="6" cy="6" r="5.25" stroke="#1e7234" strokeWidth="1.5" />

@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCart, CartItem, syncCartWithServer } from "@/lib/cart";
 import { ASSETS } from "@/lib/assets";
 import { useAuth } from "@/context/AuthContext";
+import { CheckoutSkeleton } from "@/components/Skeleton";
 import {
   orderApi,
   couponApi,
@@ -14,6 +15,10 @@ import {
   Address,
   CouponValidation,
 } from "@/lib/api";
+import CouponDrawer from "@/components/cart/CouponDrawer";
+import CustomSelect from "@/components/CustomSelect";
+
+type PaymentModel = "FULL_ONLINE" | "PARTIAL_COD";
 
 const INDIAN_STATES = [
   "Delhi",
@@ -80,25 +85,30 @@ function CheckoutContent() {
   const searchParams = useSearchParams();
   const initialCoupon = searchParams.get("coupon") || "";
 
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const { items, subtotal, isLoaded, clear, remove } = useCart();
 
   // Saved addresses
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [isAddressesLoading, setIsAddressesLoading] = useState(false);
-  const [saveAddressToAccount, setSaveAddressToAccount] = useState(true);
 
-  // Add Address Modal state (for users who want to add an address via popup)
+  // Address Drawer / Modal state (handles both Add and Edit)
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [addressDrawerShouldRender, setAddressDrawerShouldRender] = useState(false);
+  const [addressDrawerAnimateIn, setAddressDrawerAnimateIn] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [addressModalError, setAddressModalError] = useState("");
+
   const [modalForm, setModalForm] = useState({
     label: "Home",
-    fullName: "",
+    recipientName: "",
     phone: "",
+    alternatePhone: "",
     line1: "",
     line2: "",
+    landmark: "",
     city: "",
     state: "Delhi",
     pincode: "",
@@ -122,8 +132,10 @@ function CheckoutContent() {
   const [appliedPromo, setAppliedPromo] = useState<CouponValidation | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState("");
+  const [isCouponDrawerOpen, setIsCouponDrawerOpen] = useState(false);
+  const [availableCouponsCount, setAvailableCouponsCount] = useState<number | null>(null);
 
-  const [paymentMethod, setPaymentMethod] = useState<"upi" | "card" | "netbanking">("upi");
+  const [selectedPaymentModel, setSelectedPaymentModel] = useState<PaymentModel>("FULL_ONLINE");
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -132,6 +144,10 @@ function CheckoutContent() {
     items: CartItem[];
     total: number;
     shipping: ShippingFormData;
+    paymentType?: "FULL_ONLINE" | "PARTIAL_COD";
+    advanceAmount?: number;
+    shippingCharge?: number;
+    balanceDue?: number;
   } | null>(null);
 
   // Pre-fill user profile info and fetch saved addresses
@@ -146,7 +162,7 @@ function CheckoutContent() {
 
       setModalForm((prev) => ({
         ...prev,
-        fullName: prev.fullName || user.name || "",
+        recipientName: prev.recipientName || user.name || "",
         phone: prev.phone || user.phone || "",
       }));
 
@@ -161,11 +177,19 @@ function CheckoutContent() {
             if (addrs.length > 0) {
               const defaultAddr = addrs.find((a) => a.isDefault) || addrs[0];
               setSelectedAddressId(defaultAddr.id);
+              const formattedLine = [
+                defaultAddr.line1,
+                defaultAddr.line2,
+                defaultAddr.landmark ? `Near ${defaultAddr.landmark}` : null,
+              ]
+                .filter(Boolean)
+                .join(", ");
+
               setFormData((prev) => ({
                 ...prev,
-                fullName: prev.fullName || user.name || "",
-                phone: prev.phone || user.phone || "",
-                addressLine: defaultAddr.line1 + (defaultAddr.line2 ? `, ${defaultAddr.line2}` : ""),
+                fullName: defaultAddr.recipientName || prev.fullName || user.name || "",
+                phone: defaultAddr.phone || prev.phone || user.phone || "",
+                addressLine: formattedLine,
                 city: defaultAddr.city,
                 state: defaultAddr.state,
                 pincode: defaultAddr.pincode,
@@ -178,6 +202,60 @@ function CheckoutContent() {
         });
     }
   }, [user]);
+
+  // Fetch available coupons count for Zepto-style coupon banner
+  useEffect(() => {
+    couponApi
+      .listAvailable()
+      .then((res) => {
+        if (res.success && res.data?.coupons) {
+          setAvailableCouponsCount(res.data.coupons.length);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Smooth entrance & exit transitions for Address Bottom Sheet / Modal
+  useEffect(() => {
+    if (isAddressModalOpen) {
+      setAddressDrawerShouldRender(true);
+      const raf = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setAddressDrawerAnimateIn(true);
+        });
+      });
+      return () => cancelAnimationFrame(raf);
+    } else {
+      setAddressDrawerAnimateIn(false);
+      const timer = setTimeout(() => {
+        setAddressDrawerShouldRender(false);
+      }, 320);
+      return () => clearTimeout(timer);
+    }
+  }, [isAddressModalOpen]);
+
+  // Lock body scroll when Address Bottom Sheet is open
+  useEffect(() => {
+    if (isAddressModalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isAddressModalOpen]);
+
+  // Handle escape key to close Address Bottom Sheet
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (isAddressModalOpen) setIsAddressModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isAddressModalOpen]);
 
   // Validate initial coupon if passed from /cart
   const applyCouponCode = useCallback(
@@ -213,22 +291,21 @@ function CheckoutContent() {
 
   function handleAddressSelect(addrId: string) {
     setSelectedAddressId(addrId);
-    if (addrId === "manual_entry") {
-      setFormData((prev) => ({
-        ...prev,
-        addressLine: "",
-        city: "",
-        state: "Delhi",
-        pincode: "",
-      }));
-      return;
-    }
-
     const addr = savedAddresses.find((a) => a.id === addrId);
     if (addr) {
+      const formattedLine = [
+        addr.line1,
+        addr.line2,
+        addr.landmark ? `Near ${addr.landmark}` : null,
+      ]
+        .filter(Boolean)
+        .join(", ");
+
       setFormData((prev) => ({
         ...prev,
-        addressLine: addr.line1 + (addr.line2 ? `, ${addr.line2}` : ""),
+        fullName: addr.recipientName || prev.fullName || user?.name || "",
+        phone: addr.phone || prev.phone || user?.phone || "",
+        addressLine: formattedLine,
         city: addr.city,
         state: addr.state,
         pincode: addr.pincode,
@@ -256,13 +333,66 @@ function CheckoutContent() {
     }
   }
 
-  // Handle Saving New Address from Modal
+  // Open modal in Add mode
+  function handleOpenAddAddress() {
+    setEditingAddressId(null);
+    setAddressModalError("");
+    setModalForm({
+      label: "Home",
+      recipientName: user?.name || formData.fullName || "",
+      phone: user?.phone || formData.phone || "",
+      alternatePhone: "",
+      line1: "",
+      line2: "",
+      landmark: "",
+      city: "",
+      state: "Delhi",
+      pincode: "",
+      isDefault: savedAddresses.length === 0,
+    });
+    setIsAddressModalOpen(true);
+  }
+
+  // Open modal in Edit mode (pre-fills all existing fields; empty fields remain blank for easy comprehension)
+  function handleOpenEditAddress(addr: Address) {
+    setEditingAddressId(addr.id);
+    setAddressModalError("");
+    setModalForm({
+      label: addr.label || "Home",
+      recipientName: addr.recipientName || "",
+      phone: addr.phone || "",
+      alternatePhone: addr.alternatePhone || "",
+      line1: addr.line1 || "",
+      line2: addr.line2 || "",
+      landmark: addr.landmark || "",
+      city: addr.city || "",
+      state: addr.state || "Delhi",
+      pincode: addr.pincode || "",
+      isDefault: addr.isDefault || false,
+    });
+    setIsAddressModalOpen(true);
+  }
+
+  // Handle Saving Address from Modal / Bottom Sheet (Add or Update)
   async function handleSaveNewAddress(e: React.FormEvent) {
     e.preventDefault();
     setAddressModalError("");
 
+    if (!modalForm.recipientName.trim()) {
+      setAddressModalError("Please enter recipient / contact person name.");
+      return;
+    }
+    const cleanPhone = modalForm.phone.replace(/\D/g, "");
+    if (cleanPhone.length < 10) {
+      setAddressModalError("Please enter a valid 10-digit mobile number.");
+      return;
+    }
     if (!modalForm.line1.trim()) {
-      setAddressModalError("Please enter your flat / house number and street name.");
+      setAddressModalError("Please enter your flat / house number and building.");
+      return;
+    }
+    if (!modalForm.line2.trim()) {
+      setAddressModalError("Please enter your street, area or sector.");
       return;
     }
     if (!modalForm.city.trim()) {
@@ -279,42 +409,96 @@ function CheckoutContent() {
       return;
     }
 
+    const payload = {
+      recipientName: modalForm.recipientName.trim(),
+      phone: cleanPhone,
+      alternatePhone: modalForm.alternatePhone.trim() || undefined,
+      label: modalForm.label || "Home",
+      line1: modalForm.line1.trim(),
+      line2: modalForm.line2.trim() || undefined,
+      landmark: modalForm.landmark.trim() || undefined,
+      city: modalForm.city.trim(),
+      state: modalForm.state.trim(),
+      pincode: cleanPincode,
+      isDefault: modalForm.isDefault,
+    };
+
     setIsSavingAddress(true);
     try {
-      const res = await userApi.addAddress({
-        label: modalForm.label || "Home",
-        line1: modalForm.line1.trim(),
-        line2: modalForm.line2.trim() || undefined,
-        city: modalForm.city.trim(),
-        state: modalForm.state.trim(),
-        pincode: cleanPincode,
-        isDefault: modalForm.isDefault,
-      });
+      if (editingAddressId) {
+        // UPDATE existing address
+        const res = await userApi.updateAddress(editingAddressId, payload);
+        if (res.success && res.data?.address) {
+          const updatedAddr = res.data.address;
 
-      if (res.success && res.data?.address) {
-        const newAddr = res.data.address;
+          setSavedAddresses((prev) =>
+            prev.map((a) => {
+              if (a.id === updatedAddr.id) return updatedAddr;
+              if (updatedAddr.isDefault) return { ...a, isDefault: false };
+              return a;
+            })
+          );
 
-        setSavedAddresses((prev) => {
-          if (newAddr.isDefault) {
-            return [newAddr, ...prev.map((a) => ({ ...a, isDefault: false }))];
-          }
-          return [...prev, newAddr];
-        });
+          // Synchronize currently selected address and checkout shipping form data
+          setSelectedAddressId(updatedAddr.id);
+          const formattedLine = [
+            updatedAddr.line1,
+            updatedAddr.line2,
+            updatedAddr.landmark ? `Near ${updatedAddr.landmark}` : null,
+          ]
+            .filter(Boolean)
+            .join(", ");
 
-        setSelectedAddressId(newAddr.id);
-        setFormData((prev) => ({
-          ...prev,
-          fullName: modalForm.fullName.trim() || prev.fullName || user?.name || "",
-          phone: modalForm.phone.trim() || prev.phone || user?.phone || "",
-          addressLine: newAddr.line1 + (newAddr.line2 ? `, ${newAddr.line2}` : ""),
-          city: newAddr.city,
-          state: newAddr.state,
-          pincode: newAddr.pincode,
-        }));
+          setFormData((prev) => ({
+            ...prev,
+            fullName: updatedAddr.recipientName || prev.fullName,
+            phone: updatedAddr.phone || prev.phone,
+            addressLine: formattedLine,
+            city: updatedAddr.city,
+            state: updatedAddr.state,
+            pincode: updatedAddr.pincode,
+          }));
 
-        setIsAddressModalOpen(false);
+          setIsAddressModalOpen(false);
+        } else {
+          setAddressModalError(res.error || "Failed to update address. Please try again.");
+        }
       } else {
-        setAddressModalError(res.error || "Failed to save address. Please try again.");
+        // CREATE new address
+        const res = await userApi.addAddress(payload);
+        if (res.success && res.data?.address) {
+          const newAddr = res.data.address;
+
+          setSavedAddresses((prev) => {
+            if (newAddr.isDefault) {
+              return [newAddr, ...prev.map((a) => ({ ...a, isDefault: false }))];
+            }
+            return [...prev, newAddr];
+          });
+
+          setSelectedAddressId(newAddr.id);
+          const formattedLine = [
+            newAddr.line1,
+            newAddr.line2,
+            newAddr.landmark ? `Near ${newAddr.landmark}` : null,
+          ]
+            .filter(Boolean)
+            .join(", ");
+
+          setFormData((prev) => ({
+            ...prev,
+            fullName: newAddr.recipientName || modalForm.recipientName.trim() || prev.fullName || user?.name || "",
+            phone: newAddr.phone || cleanPhone || prev.phone || user?.phone || "",
+            addressLine: formattedLine,
+            city: newAddr.city,
+            state: newAddr.state,
+            pincode: newAddr.pincode,
+          }));
+
+          setIsAddressModalOpen(false);
+        } else {
+          setAddressModalError(res.error || "Failed to save address. Please try again.");
+        }
       }
     } catch {
       setAddressModalError("Failed to save address. Please check your connection.");
@@ -326,7 +510,16 @@ function CheckoutContent() {
   // Calculate totals
   const discountRupees = appliedPromo ? Math.round(appliedPromo.discountAmount / 100) : 0;
   const finalTotal = Math.max(0, subtotal - discountRupees);
+  const advanceAmountRupees = Math.min(finalTotal, 500);
+  const codShippingRupees = 70;
+  const codPayNowTotal = advanceAmountRupees + codShippingRupees;
+  const codBalanceDue = Math.max(0, finalTotal - advanceAmountRupees);
+  const payNowRupees =
+    selectedPaymentModel === "PARTIAL_COD" ? codPayNowTotal : finalTotal;
+  const balanceDueRupees =
+    selectedPaymentModel === "PARTIAL_COD" ? codBalanceDue : 0;
 
+  // Step 1: Validates delivery address and launches Razorpay directly
   async function handleCompleteOrder(e: React.FormEvent) {
     e.preventDefault();
     setErrorMessage("");
@@ -343,40 +536,22 @@ function CheckoutContent() {
       !formData.pincode.trim()
     ) {
       setErrorMessage("Please complete all mandatory delivery address fields.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
     const cleanPincode = formData.pincode.replace(/\D/g, "");
     if (cleanPincode.length !== 6) {
       setErrorMessage("Pincode must be a valid 6-digit Indian postal code.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      // 1. If user entered address inline and checked "save address", save it in background
-      let effectiveAddressId = selectedAddressId && selectedAddressId !== "manual_entry" ? selectedAddressId : undefined;
+      const effectiveAddressId = selectedAddressId || undefined;
 
-      if (!effectiveAddressId && saveAddressToAccount) {
-        try {
-          const saveRes = await userApi.addAddress({
-            label: "Home",
-            line1: formData.addressLine.trim(),
-            city: formData.city.trim(),
-            state: formData.state.trim(),
-            pincode: cleanPincode,
-            isDefault: savedAddresses.length === 0,
-          });
-          if (saveRes.success && saveRes.data?.address) {
-            effectiveAddressId = saveRes.data.address.id;
-          }
-        } catch {
-          // non-blocking fallback to inline address
-        }
-      }
-
-      // 2. Ensure Razorpay SDK script is ready
       const scriptReady = await loadRazorpayScript();
       if (!scriptReady) {
         setErrorMessage("Failed to load Razorpay gateway. Please check your internet connection.");
@@ -384,17 +559,15 @@ function CheckoutContent() {
         return;
       }
 
-      // 3. Ensure server cart matches local cart items
       await syncCartWithServer(items, true);
 
-      // 4. Create ICR Order + Razorpay Order in Backend
       const createRes = await orderApi.createOrder({
         addressId: effectiveAddressId,
         inlineAddress: !effectiveAddressId
           ? {
               fullName: formData.fullName.trim(),
               phone: formData.phone.trim(),
-              email: formData.email.trim(),
+              email: formData.email.trim() || undefined,
               line1: formData.addressLine.trim(),
               city: formData.city.trim(),
               state: formData.state.trim(),
@@ -403,7 +576,8 @@ function CheckoutContent() {
           : undefined,
         couponCode: appliedPromo?.coupon.code,
         notes: formData.notes || undefined,
-        paymentMethod,
+        paymentMethod: "upi",
+        paymentType: selectedPaymentModel,
       });
 
       if (!createRes.success || !createRes.data) {
@@ -413,19 +587,22 @@ function CheckoutContent() {
       }
 
       const { order, razorpay } = createRes.data;
+      const isPartialCod = selectedPaymentModel === "PARTIAL_COD";
 
-      // 5. Open Razorpay Checkout Modal
-      const options = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const options: any = {
         key: razorpay.keyId,
         amount: razorpay.amount,
         currency: razorpay.currency,
         name: "ICR Custom Creations",
-        description: `Custom Lithophane Order #${order.id.slice(-6).toUpperCase()}`,
+        description: isPartialCod
+          ? `Advance for Order #${order.id.slice(-6).toUpperCase()}`
+          : `Custom Lithophane Order #${order.id.slice(-6).toUpperCase()}`,
         image: ASSETS.logo,
         order_id: razorpay.orderId,
         prefill: {
           name: formData.fullName,
-          email: formData.email,
+          email: formData.email.trim() || undefined,
           contact: formData.phone,
         },
         theme: {
@@ -450,6 +627,10 @@ function CheckoutContent() {
                 items: [...items],
                 total: finalTotal,
                 shipping: { ...formData },
+                paymentType: order.paymentType,
+                advanceAmount: order.advanceAmount,
+                shippingCharge: order.shippingCharge,
+                balanceDue: order.balanceDue,
               });
             } else {
               setErrorMessage(
@@ -517,7 +698,7 @@ function CheckoutContent() {
             Thank you, {orderCompleted.shipping.fullName}!
           </h1>
           <p className="text-sm text-[#6e5c50] font-sans mb-6">
-            Your custom lithophane lamp has been received and queued for handcrafted 3D laser engraving.
+            We have received your order and started preparing your personalized lithophane lamp.
           </p>
 
           <div className="bg-[#faf7f2] border border-[#e8dfd5] rounded-2xl p-4 sm:p-5 text-left mb-6 font-sans">
@@ -529,21 +710,52 @@ function CheckoutContent() {
             </div>
             <div className="flex justify-between items-center py-3 border-b border-[#e8dfd5]">
               <span className="text-xs text-[#6e5c50]">Estimated Delivery</span>
-              <span className="text-sm font-semibold text-[#1e7234]">3 - 5 Business Days</span>
+              <span className="text-sm font-semibold text-[#1e7234]">5 - 7 Business Days</span>
             </div>
             <div className="flex justify-between items-center py-3 border-b border-[#e8dfd5]">
               <span className="text-xs text-[#6e5c50]">Delivering to</span>
               <span className="text-xs font-medium text-[#2e1e12] text-right max-w-[240px] truncate">
-                {orderCompleted.shipping.addressLine}, {orderCompleted.shipping.city} (
-                {orderCompleted.shipping.pincode})
+                {orderCompleted.shipping.addressLine}, {orderCompleted.shipping.city} - {orderCompleted.shipping.pincode}
               </span>
             </div>
-            <div className="flex justify-between items-center pt-3">
-              <span className="text-sm font-bold text-[#2e1e12]">Total Paid</span>
-              <span className="text-lg font-sans font-bold text-[#e07a28]">
-                ₹{orderCompleted.total.toLocaleString("en-IN")}
-              </span>
-            </div>
+            {orderCompleted.paymentType === "PARTIAL_COD" ? (
+              <>
+                <div className="flex justify-between items-center py-3 border-b border-[#e8dfd5]">
+                  <span className="text-xs text-[#6e5c50]">Payment Mode</span>
+                  <span className="text-[11px] font-bold text-[#e07a28] bg-[#fff3e8] border border-[#f5d9c2] px-2.5 py-0.5 rounded-md font-sans">
+                    PARTIAL PAY ON DELIVERY
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-3 border-b border-[#e8dfd5]">
+                  <div>
+                    <span className="text-xs text-[#6e5c50] block">Advance Paid Online</span>
+                    <span className="text-[11px] text-[#1e7234]">₹500 item advance + ₹70 courier fee</span>
+                  </div>
+                  <span className="text-sm font-bold text-[#1e7234]">
+                    ₹{Math.round(((orderCompleted.advanceAmount || 50000) + (orderCompleted.shippingCharge || 7000)) / 100).toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-3">
+                  <div>
+                    <span className="text-sm font-bold text-[#2e1e12] block">Balance Due on Delivery</span>
+                    <span className="text-[11px] text-[#6e5c50]">Payable at your doorstep via Cash or UPI</span>
+                  </div>
+                  <span className="text-lg font-sans font-bold text-[#e07a28]">
+                    ₹{Math.round((orderCompleted.balanceDue || 0) / 100).toLocaleString("en-IN")}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="flex justify-between items-center pt-3">
+                <div>
+                  <span className="text-sm font-bold text-[#2e1e12] block">Total Paid Online</span>
+                  <span className="text-[11px] text-[#1e7234]">100% Paid · Free Insured Delivery</span>
+                </div>
+                <span className="text-lg font-sans font-bold text-[#1e7234]">
+                  ₹{orderCompleted.total.toLocaleString("en-IN")}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Render preview of ordered items */}
@@ -603,6 +815,19 @@ function CheckoutContent() {
     );
   }
 
+  // Loading skeleton while cart and auth state are hydrating
+  if (!isLoaded || isAuthLoading) {
+    return <CheckoutSkeleton />;
+  }
+
+  function handleBackToCart() {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.replace("/cart");
+    }
+  }
+
   // If cart is empty
   if (items.length === 0) {
     return (
@@ -623,9 +848,9 @@ function CheckoutContent() {
             <path d="M16 10a4 4 0 0 1-8 0"></path>
           </svg>
         </div>
-        <h2 className="text-2xl font-serif font-bold text-[#2e1e12] mb-2">Your Bag is Empty</h2>
+        <h2 className="text-2xl font-serif font-bold text-[#2e1e12] mb-2">Your Cart is Empty</h2>
         <p className="text-sm text-[#6e5c50] font-sans mb-6 max-w-sm">
-          You don&apos;t have any personalized lithophanes in your bag right now.
+          You don&apos;t have any personalized lithophanes in your cart right now.
         </p>
         <Link
           href="/customize"
@@ -638,16 +863,17 @@ function CheckoutContent() {
   }
 
   const hasSavedAddresses = savedAddresses.length > 0;
-  const isEnteringManualAddress = !hasSavedAddresses || selectedAddressId === "manual_entry";
 
   return (
     <div className="min-h-screen bg-[#faf7f2] text-[#2e1e12] flex flex-col">
       {/* ── Fixed Checkout Header ──────────────────────────── */}
       <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md bg-[rgba(250,247,242,0.96)] border-b border-[#e8dfd5]">
-        <div className="max-w-[1200px] mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
-          <Link
-            href="/cart"
-            className="flex items-center gap-1.5 text-[#6e5c50] hover:text-[#2e1e12] font-sans text-sm font-medium transition-colors"
+        <div className="relative max-w-[1200px] mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={handleBackToCart}
+            className="flex items-center gap-1.5 text-[#6e5c50] hover:text-[#2e1e12] font-sans text-sm font-medium transition-colors z-10 cursor-pointer"
+            aria-label="Back to Cart"
           >
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
               <path
@@ -658,32 +884,39 @@ function CheckoutContent() {
                 strokeLinejoin="round"
               />
             </svg>
-            <span className="hidden sm:inline">Back to Bag</span>
-            <span className="sm:hidden">Bag</span>
-          </Link>
+            <span className="hidden sm:inline">Back to Cart</span>
+            <span className="sm:hidden">Cart</span>
+          </button>
 
-          <Link href="/" className="relative w-10 h-10 shrink-0">
-            <Image
-              src={ASSETS.logo}
-              alt="ICR Custom Creations"
-              fill
-              sizes="40px"
-              className="object-contain"
-              priority
-            />
-          </Link>
+          {/* Center: Logo */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto flex items-center justify-center">
+            <Link
+              href="/"
+              className="relative w-24 h-24 flex items-center justify-center shrink-0 block hover:opacity-90 transition-opacity"
+              aria-label="ICR Custom Creations Home"
+            >
+              <Image
+                src={ASSETS.logo}
+                alt="ICR Custom Creations"
+                fill
+                sizes="96px"
+                className="object-contain object-center"
+                priority
+              />
+            </Link>
+          </div>
 
-          <div className="flex items-center gap-1.5 text-[#1e7234] text-xs font-semibold font-sans bg-[#eaf5ec] px-3 py-1 rounded-full border border-[#c6e6ca]">
+          <div className="flex items-center gap-1.5 text-[#1e7234] text-xs font-semibold font-sans bg-[#eaf5ec] px-3 py-1 rounded-full border border-[#c6e6ca] z-10">
             <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
               <path d="M8 0a8 8 0 100 16A8 8 0 008 0zm3.707 6.707l-4.5 4.5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l3.793-3.793a1 1 0 011.414 1.414z" />
             </svg>
-            <span>Razorpay Secured</span>
+            <span>Secured</span>
           </div>
         </div>
       </header>
 
       {/* ── Main Checkout Form & Summary ───────────────────── */}
-      <main className="pt-24 pb-20 max-w-[1200px] mx-auto px-4 lg:px-8 w-full">
+      <main className="pt-24 pb-32 sm:pb-20 max-w-[1200px] mx-auto px-4 lg:px-8 w-full">
         <h1 className="text-2xl lg:text-3xl font-serif font-bold text-[#2e1e12] mb-6">
           Checkout
         </h1>
@@ -719,26 +952,12 @@ function CheckoutContent() {
                   </h2>
                 </div>
 
-                {/* Refined Add New button (only shown when saved addresses exist) */}
+                {/* Add New button (only shown when saved addresses exist) */}
                 {hasSavedAddresses && (
                   <button
                     type="button"
-                    onClick={() => {
-                      setAddressModalError("");
-                      setModalForm({
-                        label: "Home",
-                        fullName: user?.name || formData.fullName || "",
-                        phone: user?.phone || formData.phone || "",
-                        line1: "",
-                        line2: "",
-                        city: "",
-                        state: "Delhi",
-                        pincode: "",
-                        isDefault: false,
-                      });
-                      setIsAddressModalOpen(true);
-                    }}
-                    className="flex items-center gap-1 text-xs font-semibold font-sans text-[#e07a28] hover:text-[#c96a1f] bg-[#fff8f2] hover:bg-[#ffede0] border border-[#f0c8a0] px-2.5 py-1.5 rounded-lg transition-all"
+                    onClick={handleOpenAddAddress}
+                    className="flex items-center gap-1 text-xs font-semibold font-sans text-[#e07a28] hover:text-[#c96a1f] bg-[#fff8f2] hover:bg-[#ffede0] border border-[#f0c8a0] px-2.5 py-1.5 rounded-lg transition-all cursor-pointer"
                   >
                     <svg
                       width="12"
@@ -784,9 +1003,9 @@ function CheckoutContent() {
                         >
                           <div>
                             <div className="flex items-center justify-between gap-2 mb-1.5">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
                                 <span
-                                  className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                                  className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
                                     isSelected
                                       ? "border-[#e07a28] bg-[#e07a28]"
                                       : "border-[#a89887]"
@@ -796,23 +1015,57 @@ function CheckoutContent() {
                                     <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
                                   )}
                                 </span>
-                                <span className="font-bold uppercase tracking-wider text-[10px] bg-[#f2ebdc] text-[#5a3a1a] px-2 py-0.5 rounded-md">
+                                <span className="font-bold uppercase tracking-wider text-[10px] bg-[#f2ebdc] text-[#5a3a1a] px-2 py-0.5 rounded-md shrink-0">
                                   {addr.label || "Address"}
                                 </span>
+                                {addr.isDefault && (
+                                  <span className="text-[9px] font-bold text-[#1e7234] bg-[#eaf5ec] px-1.5 py-0.5 rounded uppercase shrink-0">
+                                    Default
+                                  </span>
+                                )}
                               </div>
-                              {addr.isDefault && (
-                                <span className="text-[9px] font-bold text-[#1e7234] bg-[#eaf5ec] px-1.5 py-0.5 rounded uppercase">
-                                  Default
+
+                              {/* Edit Address Button */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenEditAddress(addr);
+                                }}
+                                className="text-xs font-semibold text-[#e07a28] hover:text-[#c96a1f] px-2.5 py-1 rounded-md hover:bg-[#fff3e8] border border-[#f0c8a0] transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                                title="Edit or complete address details"
+                              >
+                                <svg
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                </svg>
+                                <span>Edit</span>
+                              </button>
+                            </div>
+
+                            <div className="flex items-center justify-between mt-1 gap-2">
+                              <p className="font-semibold text-[#2e1e12] text-xs truncate">
+                                {addr.recipientName || formData.fullName || user?.name || "Recipient"}
+                              </p>
+                              {addr.phone && (
+                                <span className="text-[11px] text-[#6e5c50] font-sans font-medium shrink-0">
+                                  +91 {addr.phone}
                                 </span>
                               )}
                             </div>
-
-                            <p className="font-semibold text-[#2e1e12] mt-1 text-xs">
-                              {formData.fullName || user?.name || "Recipient"}
-                            </p>
                             <p className="text-[#6e5c50] text-[11px] line-clamp-2 mt-0.5 leading-relaxed">
                               {addr.line1}
                               {addr.line2 ? `, ${addr.line2}` : ""}
+                              {addr.landmark ? `, Near ${addr.landmark}` : ""}
                             </p>
                             <p className="text-[#6e5c50] text-[11px] font-medium mt-0.5">
                               {addr.city}, {addr.state} -{" "}
@@ -823,27 +1076,15 @@ function CheckoutContent() {
                       );
                     })}
 
-                    {/* Option to enter manual address */}
+                    {/* Option to add a different address via bottom sheet */}
                     <div
-                      onClick={() => handleAddressSelect("manual_entry")}
-                      className={`p-3.5 rounded-xl border text-xs font-sans cursor-pointer transition-all flex items-center gap-2.5 ${
-                        selectedAddressId === "manual_entry"
-                          ? "border-[#e07a28] bg-[#fffbf7] ring-1 ring-[#e07a28]/30 shadow-sm"
-                          : "border-[#e8dfd5] hover:border-[#c9baa7] hover:bg-[#faf7f2]"
-                      }`}
+                      onClick={handleOpenAddAddress}
+                      className="p-3.5 rounded-xl border border-dashed border-[#d5c7b5] hover:border-[#e07a28] bg-[#faf7f2] hover:bg-[#fffbf7] text-xs font-sans cursor-pointer transition-all flex items-center gap-2.5 group"
                     >
-                      <span
-                        className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
-                          selectedAddressId === "manual_entry"
-                            ? "border-[#e07a28] bg-[#e07a28]"
-                            : "border-[#a89887]"
-                        }`}
-                      >
-                        {selectedAddressId === "manual_entry" && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
-                        )}
-                      </span>
-                      <span className="font-medium text-[#2e1e12]">
+                      <div className="w-4 h-4 rounded-full border border-[#a89887] group-hover:border-[#e07a28] flex items-center justify-center shrink-0 transition-colors">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#e07a28] opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                      <span className="font-medium text-[#2e1e12] group-hover:text-[#e07a28] transition-colors">
                         Deliver to a different address
                       </span>
                     </div>
@@ -851,157 +1092,45 @@ function CheckoutContent() {
                 </div>
               ) : null}
 
-              {/* Case B: First-time Buyer or Manual Address Entry (Zero-friction, no popup required) */}
-              {isEnteringManualAddress && (
-                <div className="flex flex-col gap-4 mb-4">
-                  {!hasSavedAddresses && (
-                    <div className="bg-[#faf7f2] border border-[#e8dfd5] rounded-xl p-3 text-xs text-[#6e5c50] font-sans flex items-center gap-2">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e07a28" strokeWidth="2" className="shrink-0">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="16" x2="12" y2="12"></line>
-                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                      </svg>
-                      <span>Please enter your delivery destination. We&apos;ll carefully ship your custom lamp here.</span>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs font-sans">
-                    {/* Street Address Line 1 */}
-                    <div className="sm:col-span-2 flex flex-col gap-1">
-                      <label className="font-semibold text-[#5a3a1a]">
-                        House / Flat No., Apartment, Street Address <span className="text-[#b83a3a]">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        name="addressLine"
-                        value={formData.addressLine}
-                        onChange={handleChange}
-                        placeholder="e.g. Flat 402, Oakwood Residency, 14th Main"
-                        className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
-                      />
-                    </div>
-
-                    {/* City */}
-                    <div className="flex flex-col gap-1">
-                      <label className="font-semibold text-[#5a3a1a]">
-                        City <span className="text-[#b83a3a]">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        name="city"
-                        value={formData.city}
-                        onChange={handleChange}
-                        placeholder="e.g. New Delhi"
-                        className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
-                      />
-                    </div>
-
-                    {/* State */}
-                    <div className="flex flex-col gap-1">
-                      <label className="font-semibold text-[#5a3a1a]">
-                        State <span className="text-[#b83a3a]">*</span>
-                      </label>
-                      <select
-                        name="state"
-                        value={formData.state}
-                        onChange={handleChange}
-                        className="bg-white border border-[#dcd4c8] rounded-xl px-3 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
-                      >
-                        {INDIAN_STATES.map((st) => (
-                          <option key={st} value={st}>
-                            {st}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Pincode */}
-                    <div className="flex flex-col gap-1">
-                      <label className="font-semibold text-[#5a3a1a]">
-                        Pincode <span className="text-[#b83a3a]">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        name="pincode"
-                        maxLength={6}
-                        value={formData.pincode}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            pincode: e.target.value.replace(/\D/g, "").slice(0, 6),
-                          }))
-                        }
-                        placeholder="6 Digits"
-                        className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 font-mono transition-all"
-                      />
-                    </div>
-
-                    {/* Save to account checkbox */}
-                    <div className="flex items-center gap-2 pt-1 sm:col-span-2">
-                      <input
-                        type="checkbox"
-                        id="saveAddress"
-                        checked={saveAddressToAccount}
-                        onChange={(e) => setSaveAddressToAccount(e.target.checked)}
-                        className="accent-[#e07a28] w-4 h-4 rounded"
-                      />
-                      <label htmlFor="saveAddress" className="text-xs text-[#5a3a1a] cursor-pointer">
-                        Save this address to my account for faster checkout next time
-                      </label>
-                    </div>
+              {/* Case B: First-time Buyer (Prompt to add delivery address via bottom sheet) */}
+              {!hasSavedAddresses && !isAddressesLoading && (
+                <div className="flex flex-col items-center justify-center p-6 text-center border border-dashed border-[#dcd4c8] rounded-2xl bg-[#faf7f2] mb-4">
+                  <div className="w-12 h-12 rounded-full bg-[#f2ebdc] text-[#5a3a1a] flex items-center justify-center mb-3">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
                   </div>
+                  <h3 className="font-serif font-bold text-sm text-[#2e1e12] mb-1">
+                    No delivery address added yet
+                  </h3>
+                  <p className="text-xs text-[#6e5c50] font-sans mb-4 max-w-xs leading-relaxed">
+                    Add your delivery address to proceed with your order.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddAddress}
+                    className="h-11 px-5 rounded-xl bg-[#e07a28] hover:bg-[#c96a1f] text-white text-xs font-bold font-sans uppercase tracking-wider shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Add Delivery Address</span>
+                  </button>
                 </div>
               )}
 
-              {/* Recipient Details & Notes */}
+              {/* Order Communication & Notes */}
               <div className="border-t border-[#f2ebdc] pt-4 mt-2">
-                <span className="text-xs font-semibold text-[#5a3a1a] font-sans block mb-3">
-                  Recipient Contact Details:
-                </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs font-sans">
-                  {/* Full Name */}
-                  <div className="flex flex-col gap-1">
-                    <label className="font-semibold text-[#5a3a1a]">
-                      Full Name <span className="text-[#b83a3a]">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      name="fullName"
-                      value={formData.fullName}
-                      onChange={handleChange}
-                      placeholder="e.g. Rittik Sharma"
-                      className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
-                    />
-                  </div>
-
-                  {/* Phone */}
-                  <div className="flex flex-col gap-1">
-                    <label className="font-semibold text-[#5a3a1a]">
-                      Mobile Phone (for delivery SMS) <span className="text-[#b83a3a]">*</span>
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      placeholder="+91 98765 43210"
-                      className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
-                    />
-                  </div>
-
                   {/* Email */}
-                  <div className="sm:col-span-2 flex flex-col gap-1">
+                  <div className="flex flex-col gap-1">
                     <label className="font-semibold text-[#5a3a1a]">
-                      Email Address (for order receipts & tracking) <span className="text-[#b83a3a]">*</span>
+                      Email Address <span className="text-[#8c7b70] text-[11px] font-normal">Optional · For invoice & tracking</span>
                     </label>
                     <input
                       type="email"
-                      required
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
@@ -1011,122 +1140,227 @@ function CheckoutContent() {
                   </div>
 
                   {/* Special Instructions */}
-                  <div className="sm:col-span-2 flex flex-col gap-1">
+                  <div className="flex flex-col gap-1">
                     <label className="font-semibold text-[#5a3a1a]">
-                      Special Gift / Delivery Notes (optional)
+                      Delivery Notes <span className="text-[#8c7b70] text-[11px] font-normal">Optional</span>
                     </label>
-                    <textarea
-                      rows={2}
+                    <input
+                      type="text"
                       name="notes"
                       value={formData.notes}
                       onChange={handleChange}
                       placeholder="e.g. Please pack carefully as an anniversary gift"
-                      className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
+                      className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
                     />
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Step 2: Payment Method (Handled securely by Razorpay) */}
-            <div className="bg-white border border-[#e8dfd5] rounded-2xl p-5 sm:p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[#f2ebdc]">
-                <span className="w-6 h-6 rounded-full bg-[#e07a28] text-white flex items-center justify-center text-xs font-bold font-sans shrink-0">
-                  2
-                </span>
-                <h2 className="text-base sm:text-lg font-serif font-bold text-[#2e1e12]">
-                  Payment Method
-                </h2>
-              </div>
-
-              <div className="flex flex-col gap-2.5 font-sans text-xs sm:text-sm">
-                {/* UPI */}
-                <label
-                  className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
-                    paymentMethod === "upi"
-                      ? "border-[#e07a28] bg-[#fffbf7] ring-1 ring-[#e07a28]/30 shadow-sm"
-                      : "border-[#e8dfd5] hover:bg-[#faf7f2]"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="radio"
-                      name="payment"
-                      checked={paymentMethod === "upi"}
-                      onChange={() => setPaymentMethod("upi")}
-                      className="accent-[#e07a28] w-4 h-4"
-                    />
-                    <div>
-                      <span className="font-bold text-[#2e1e12] block">
-                        UPI / Google Pay / PhonePe / Paytm / QR
-                      </span>
-                      <span className="text-[#6e5c50] text-xs">
-                        Instant UPI QR code or direct payment via apps
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-bold text-[#1e7234] bg-[#eaf5ec] px-2 py-0.5 rounded-md shrink-0">
-                    FASTEST
+            {/* Step 2: Payment Mode */}
+            <div className="bg-white border border-[#e8dfd5] rounded-2xl p-4 sm:p-5 shadow-xs">
+              <div className="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-[#f2ebdc]">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-[#e07a28] text-white flex items-center justify-center text-[11px] font-bold font-sans shrink-0">
+                    2
                   </span>
-                </label>
-
-                {/* Cards */}
-                <label
-                  className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
-                    paymentMethod === "card"
-                      ? "border-[#e07a28] bg-[#fffbf7] ring-1 ring-[#e07a28]/30 shadow-sm"
-                      : "border-[#e8dfd5] hover:bg-[#faf7f2]"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="radio"
-                      name="payment"
-                      checked={paymentMethod === "card"}
-                      onChange={() => setPaymentMethod("card")}
-                      className="accent-[#e07a28] w-4 h-4"
-                    />
-                    <div>
-                      <span className="font-bold text-[#2e1e12] block">Credit / Debit Card</span>
-                      <span className="text-[#6e5c50] text-xs">
-                        Visa, Mastercard, RuPay, Amex
-                      </span>
-                    </div>
-                  </div>
-                </label>
-
-                {/* NetBanking */}
-                <label
-                  className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
-                    paymentMethod === "netbanking"
-                      ? "border-[#e07a28] bg-[#fffbf7] ring-1 ring-[#e07a28]/30 shadow-sm"
-                      : "border-[#e8dfd5] hover:bg-[#faf7f2]"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="radio"
-                      name="payment"
-                      checked={paymentMethod === "netbanking"}
-                      onChange={() => setPaymentMethod("netbanking")}
-                      className="accent-[#e07a28] w-4 h-4"
-                    />
-                    <div>
-                      <span className="font-bold text-[#2e1e12] block">Net Banking</span>
-                      <span className="text-[#6e5c50] text-xs">
-                        HDFC, ICICI, SBI, Axis, Kotak & 50+ Banks
-                      </span>
-                    </div>
-                  </div>
-                </label>
+                  <h2 className="text-sm sm:text-base font-serif font-bold text-[#2e1e12]">
+                    Payment Mode
+                  </h2>
+                </div>
+                <div className="flex items-center gap-1 text-[11px] text-[#1e7234] font-sans font-medium">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  <span>Encrypted & Safe</span>
+                </div>
               </div>
 
-              <div className="mt-3.5 flex items-center gap-2 text-xs text-[#6e5c50] font-sans">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e7234" strokeWidth="2" className="shrink-0">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              {/* Mode Selection Cards: Pay Online vs Pay on Delivery */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
+                {/* Full Online Option */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedPaymentModel("FULL_ONLINE")}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedPaymentModel("FULL_ONLINE");
+                    }
+                  }}
+                  className={`p-3 rounded-xl border-2 transition-all cursor-pointer text-left ${
+                    selectedPaymentModel === "FULL_ONLINE"
+                      ? "border-[#e07a28] bg-[#fffaf5] shadow-xs"
+                      : "border-[#e8dfd5] hover:border-[#d5c7b5] bg-white"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div
+                        className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
+                          selectedPaymentModel === "FULL_ONLINE"
+                            ? "border-[#e07a28] bg-[#e07a28]"
+                            : "border-[#b8a99a] bg-white"
+                        }`}
+                      >
+                        {selectedPaymentModel === "FULL_ONLINE" && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                        )}
+                      </div>
+                      <span className="font-bold text-xs sm:text-sm text-[#2e1e12] font-sans truncate">
+                        Pay Full Online
+                      </span>
+                    </div>
+                    <span className="text-[9px] font-bold text-[#1e7234] bg-[#eaf5ec] px-1.5 py-0.5 rounded uppercase shrink-0">
+                      Free Delivery
+                    </span>
+                  </div>
+
+                  <div className="pl-5.5 text-xs text-[#6e5c50] font-sans leading-snug">
+                    <div>
+                      Pay <span className="font-bold text-[#2e1e12]">₹{finalTotal.toLocaleString("en-IN")}</span> online now
+                    </div>
+                    <div className="text-[11px] text-[#1e7234] font-medium mt-0.5">
+                      Saves ₹70 courier handling fee
+                    </div>
+                  </div>
+                </div>
+
+                {/* Partial COD Option */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedPaymentModel("PARTIAL_COD")}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedPaymentModel("PARTIAL_COD");
+                    }
+                  }}
+                  className={`p-3 rounded-xl border-2 transition-all cursor-pointer text-left ${
+                    selectedPaymentModel === "PARTIAL_COD"
+                      ? "border-[#e07a28] bg-[#fffaf5] shadow-xs"
+                      : "border-[#e8dfd5] hover:border-[#d5c7b5] bg-white"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div
+                        className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
+                          selectedPaymentModel === "PARTIAL_COD"
+                            ? "border-[#e07a28] bg-[#e07a28]"
+                            : "border-[#b8a99a] bg-white"
+                        }`}
+                      >
+                        {selectedPaymentModel === "PARTIAL_COD" && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                        )}
+                      </div>
+                      <span className="font-bold text-xs sm:text-sm text-[#2e1e12] font-sans truncate">
+                        Pay on Delivery
+                      </span>
+                    </div>
+                    <span className="text-[9px] font-bold text-[#e07a28] bg-[#fff3e8] border border-[#f5d9c2] px-1.5 py-0.5 rounded uppercase shrink-0">
+                      ₹570 Advance
+                    </span>
+                  </div>
+
+                  <div className="pl-5.5 text-xs text-[#6e5c50] font-sans leading-snug">
+                    <div>
+                      Pay <span className="font-bold text-[#2e1e12]">₹570 online now</span>
+                    </div>
+                    <div className="text-[11px] text-[#855325] font-medium mt-0.5">
+                      Pay rest ₹{codBalanceDue.toLocaleString("en-IN")} on delivery
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Clear Financial Breakdown for Selected Mode */}
+              {selectedPaymentModel === "PARTIAL_COD" ? (
+                <div className="bg-[#faf7f2] border border-[#e8dfd5] rounded-xl p-3 sm:p-3.5 font-sans">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-[#6e5c50] mb-2 pb-1.5 border-b border-[#e8dfd5] flex items-center justify-between">
+                    <span>Advance Payment Breakdown</span>
+                    <span className="text-[10px] text-[#e07a28] font-bold bg-[#fff3e8] px-2 py-0.5 rounded border border-[#f5d9c2]">
+                      Partial COD
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex justify-between items-center text-[#5a3a1a]">
+                      <span>Custom item advance</span>
+                      <span className="font-medium text-[#2e1e12]">₹500</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[#5a3a1a]">
+                      <span>Courier and COD handling fee</span>
+                      <span className="font-medium text-[#2e1e12]">+₹70</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-[#e8dfd5] font-bold">
+                      <span className="text-[#2e1e12]">Payable online now</span>
+                      <span className="text-[#e07a28] text-sm">₹570</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-1 text-[#5a3a1a]">
+                      <span>Balance payable on doorstep delivery</span>
+                      <span className="font-bold text-[#2e1e12]">
+                        ₹{codBalanceDue.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-[#e8dfd5] flex items-start gap-1.5 text-[11px] text-[#786a5e] leading-snug">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e07a28" strokeWidth="2" className="shrink-0 mt-0.5">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="16" x2="12" y2="12" />
+                      <line x1="12" y1="8" x2="12.01" y2="8" />
+                    </svg>
+                    <span>
+                      Because each lithophane is custom 3D printed with your personal photo, a ₹570 advance is required to start manufacturing. You can pay the balance to the delivery agent via Cash or any UPI app.
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-[#f2f8f4] border border-[#cbe4d2] rounded-xl p-3 sm:p-3.5 font-sans">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-[#1e7234] mb-2 pb-1.5 border-b border-[#cbe4d2] flex items-center justify-between">
+                    <span>Full Payment Summary</span>
+                    <span className="text-[10px] text-[#1e7234] font-bold bg-[#e0f3e4] px-2 py-0.5 rounded border border-[#bfe5c6]">
+                      Save ₹70
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex justify-between items-center text-[#2e6e3c]">
+                      <span>Order total</span>
+                      <span className="font-bold text-[#2e1e12]">₹{finalTotal.toLocaleString("en-IN")}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[#2e6e3c]">
+                      <span>Courier and COD handling</span>
+                      <span className="font-bold text-[#1e7234]">FREE</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-[#cbe4d2] font-bold">
+                      <span className="text-[#2e1e12]">Total payable online</span>
+                      <span className="text-[#1e7234] text-sm">₹{finalTotal.toLocaleString("en-IN")}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-[#cbe4d2] flex items-center gap-1.5 text-[11px] text-[#2e6e3c] leading-snug">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1e7234" strokeWidth="2.5" className="shrink-0">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span>
+                      Pay via Google Pay, PhonePe, Paytm, Cards, or Net Banking on the next screen.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Security note */}
+              <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-[#786a5e] font-sans">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1e7234" strokeWidth="2" className="shrink-0">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                 </svg>
-                <span>Payments handled securely by Razorpay. 100% RBI compliant & encrypted.</span>
+                <span className="truncate">256-bit encrypted checkout handled securely by Razorpay.</span>
               </div>
             </div>
           </div>
@@ -1134,9 +1368,14 @@ function CheckoutContent() {
           {/* Right Column: Order Review & Summary */}
           <div className="flex flex-col gap-4 sticky top-24">
             <div className="bg-white border border-[#e8dfd5] rounded-2xl p-5 sm:p-6 shadow-sm">
-              <h2 className="text-base font-serif font-bold text-[#2e1e12] mb-4 pb-2 border-b border-[#f2ebdc]">
-                Order Review ({items.length} {items.length === 1 ? "item" : "items"})
-              </h2>
+              <div className="flex items-center justify-between mb-4 pb-2 border-b border-[#f2ebdc]">
+                <h2 className="text-sm sm:text-base font-serif font-bold text-[#2e1e12]">
+                  Order Review
+                </h2>
+                <span className="text-xs text-[#786a5e] font-sans font-medium">
+                  {items.length} {items.length === 1 ? "item" : "items"}
+                </span>
+              </div>
 
               {/* Items List with Clean Remove Button */}
               <div className="flex flex-col gap-3 mb-5 max-h-72 overflow-y-auto pr-1">
@@ -1205,49 +1444,95 @@ function CheckoutContent() {
               {/* Promo Code Section */}
               <div className="mb-4 pb-4 border-b border-[#f2ebdc]">
                 {appliedPromo ? (
-                  <div className="flex items-center justify-between bg-[#eaf5ec] border border-[#c6e6ca] rounded-xl px-3 py-2 text-xs text-[#1e7234] font-sans">
-                    <div>
-                      <span className="font-bold uppercase tracking-wider">
-                        {appliedPromo.coupon.code}
-                      </span>
-                      <span className="block text-[11px] text-[#2c6e3b]">
-                        ₹{Math.round(appliedPromo.discountAmount / 100).toLocaleString("en-IN")} discount applied!
-                      </span>
+                  <div className="flex items-center justify-between bg-[#f0f9f2] border border-[#bfe5c6] rounded-xl px-3.5 py-2.5 text-xs text-[#1e7234] font-sans animate-fadeIn">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-6 h-6 rounded-md bg-[#e0f3e4] text-[#1e7234] flex items-center justify-center shrink-0 border border-[#bfe5c6]">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <span className="font-bold uppercase tracking-wider block truncate">
+                          {appliedPromo.coupon.code}
+                        </span>
+                        <span className="block text-[11px] text-[#2e6e3c] font-medium leading-tight">
+                          ₹{Math.round(appliedPromo.discountAmount / 100).toLocaleString("en-IN")} discount applied!
+                        </span>
+                      </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => {
                         setAppliedPromo(null);
                         setPromoInput("");
+                        setPromoError("");
                       }}
-                      className="text-[#b83a3a] font-bold text-xs hover:underline"
+                      className="text-[#b83a3a] font-bold text-xs hover:underline cursor-pointer ml-2 shrink-0"
                     >
                       Remove
                     </button>
                   </div>
                 ) : (
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Promo / Coupon code"
-                      value={promoInput}
-                      onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
-                      className="flex-1 bg-white border border-[#dcd4c8] rounded-xl px-3 py-2 text-xs sm:text-sm uppercase font-sans text-[#2e1e12] focus:outline-none focus:border-[#e07a28]"
-                    />
-                    <button
-                      type="button"
-                      disabled={promoLoading || !promoInput.trim()}
-                      onClick={() => applyCouponCode(promoInput.trim())}
-                      className="bg-[#2e1e12] hover:bg-[#443021] text-white px-3.5 py-2 rounded-xl text-xs font-bold font-sans transition-colors disabled:opacity-50"
+                  <div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Promo / Coupon code"
+                        value={promoInput}
+                        onChange={(e) => {
+                          setPromoInput(e.target.value.toUpperCase());
+                          if (promoError) setPromoError("");
+                        }}
+                        className="flex-1 bg-white border border-[#dcd4c8] rounded-xl px-3 py-2 text-xs sm:text-sm uppercase font-sans text-[#2e1e12] focus:outline-none focus:border-[#e07a28]"
+                      />
+                      <button
+                        type="button"
+                        disabled={promoLoading || !promoInput.trim()}
+                        onClick={() => applyCouponCode(promoInput.trim())}
+                        className="bg-[#2e1e12] hover:bg-[#443021] text-white px-3.5 py-2 rounded-xl text-xs font-bold font-sans transition-colors disabled:opacity-50 cursor-pointer"
+                      >
+                        {promoLoading ? "..." : "Apply"}
+                      </button>
+                    </div>
+
+                    {promoError && (
+                      <span className="block mt-1.5 text-xs text-[#b83a3a] font-sans">
+                        {promoError}
+                      </span>
+                    )}
+
+                    {/* Zepto/Blinkit-style "View all available coupons" banner */}
+                    <div
+                      onClick={() => setIsCouponDrawerOpen(true)}
+                      className="mt-2.5 bg-[#fdfaf5] border border-[#e8dfd5] hover:border-[#e07a28]/60 active:bg-[#f5ede0] rounded-xl p-2.5 flex items-center justify-between gap-2 cursor-pointer transition-colors group"
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setIsCouponDrawerOpen(true);
+                        }
+                      }}
                     >
-                      {promoLoading ? "..." : "Apply"}
-                    </button>
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-md bg-[#fdf2e8] text-[#e07a28] flex items-center justify-center shrink-0 border border-[#f8dec8]">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                            <line x1="7" y1="7" x2="7.01" y2="7" />
+                          </svg>
+                        </div>
+                        <span className="text-xs font-semibold text-[#2e1e12] font-sans">
+                          View all available coupons
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold text-[#e07a28] flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform font-sans">
+                        View
+                        <svg width="12" height="12" viewBox="0 0 20 20" fill="none">
+                          <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </span>
+                    </div>
                   </div>
-                )}
-                {promoError && (
-                  <span className="block mt-1.5 text-xs text-[#b83a3a] font-sans">
-                    {promoError}
-                  </span>
                 )}
               </div>
 
@@ -1262,33 +1547,62 @@ function CheckoutContent() {
 
                 {discountRupees > 0 && (
                   <div className="flex justify-between text-[#1e7234] font-medium">
-                    <span>Coupon Discount ({appliedPromo?.coupon.code})</span>
+                    <span>Coupon Discount: {appliedPromo?.coupon.code}</span>
                     <span>- ₹{discountRupees.toLocaleString("en-IN")}</span>
                   </div>
                 )}
 
                 <div className="flex justify-between text-[#6e5c50]">
-                  <span>Crafting & 3D Laser Engraving</span>
-                  <span className="text-[#1e7234] font-semibold uppercase">FREE</span>
-                </div>
-                <div className="flex justify-between text-[#6e5c50]">
-                  <span>Express Insured Shipping</span>
+                  <span>Crafting & Packaging</span>
                   <span className="text-[#1e7234] font-semibold uppercase">FREE</span>
                 </div>
 
-                <div className="border-t border-[#e8dfd5] pt-3 mt-1 flex justify-between items-baseline">
-                  <span className="text-sm font-bold text-[#2e1e12]">Total to Pay</span>
-                  <span className="text-xl font-sans font-bold text-[#e07a28]">
-                    ₹{finalTotal.toLocaleString("en-IN")}
-                  </span>
-                </div>
+                {selectedPaymentModel === "PARTIAL_COD" ? (
+                  <>
+                    <div className="flex justify-between text-[#6e5c50]">
+                      <span>Courier and COD Handling Fee</span>
+                      <span className="text-[#2e1e12] font-semibold">₹70</span>
+                    </div>
+
+                    <div className="border-t border-[#e8dfd5] pt-3 mt-1 flex justify-between items-baseline">
+                      <div>
+                        <span className="text-sm font-bold text-[#2e1e12] block">Advance Due Now</span>
+                        <span className="text-[11px] text-[#6e5c50]">₹500 item advance + ₹70 courier fee</span>
+                      </div>
+                      <span className="text-xl font-sans font-bold text-[#e07a28]">
+                        ₹{payNowRupees.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+
+                    <div className="bg-[#fff8f2] border border-[#f5d9c2] rounded-xl p-2.5 mt-1 flex justify-between items-center text-xs">
+                      <span className="text-[#5a3a1a] font-medium">Balance on Delivery</span>
+                      <span className="font-bold text-[#2e1e12]">
+                        ₹{balanceDueRupees.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-[#6e5c50]">
+                      <span>Express Insured Shipping</span>
+                      <span className="text-[#1e7234] font-semibold uppercase">FREE</span>
+                    </div>
+
+                    <div className="border-t border-[#e8dfd5] pt-3 mt-1 flex justify-between items-baseline">
+                      <span className="text-sm font-bold text-[#2e1e12]">Total to Pay</span>
+                      <span className="text-xl font-sans font-bold text-[#1e7234]">
+                        ₹{finalTotal.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Submit CTA */}
               <button
                 type="submit"
                 disabled={isProcessing}
-                className="w-full mt-5 bg-[#e07a28] hover:bg-[#c96a1f] text-white font-bold font-sans text-xs sm:text-sm uppercase tracking-wider py-3.5 sm:py-4 rounded-xl shadow-[0_4px_14px_rgba(224,122,40,0.3)] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-60"
+                className="w-full mt-5 bg-[#e07a28] hover:bg-[#c96a1f] active:bg-[#b55c14] text-white font-bold font-sans text-xs sm:text-sm uppercase tracking-wider py-3.5 sm:py-4 rounded-xl shadow-[0_4px_14px_rgba(224,122,40,0.35)] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
               >
                 {isProcessing ? (
                   <div className="flex items-center gap-2">
@@ -1311,16 +1625,20 @@ function CheckoutContent() {
                         d="M4 12a8 8 0 018-8v8H4z"
                       />
                     </svg>
-                    <span>Opening Razorpay Gateway...</span>
+                    <span>Processing Payment...</span>
                   </div>
                 ) : (
                   <>
-                    <span>Pay ₹{finalTotal.toLocaleString("en-IN")} & Place Order</span>
+                    <span>
+                      {selectedPaymentModel === "PARTIAL_COD"
+                        ? "Pay Advance ₹570"
+                        : `Pay ₹${finalTotal.toLocaleString("en-IN")}`}
+                    </span>
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                       <path
-                        d="M4 8h8M8 4l4 4-4 4"
+                        d="M3.5 8h9M8.5 4l4 4-4 4"
                         stroke="currentColor"
-                        strokeWidth="1.8"
+                        strokeWidth="2"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       />
@@ -1329,220 +1647,436 @@ function CheckoutContent() {
                 )}
               </button>
 
-              <div className="mt-3.5 text-[11px] text-center text-[#6e5c50] font-sans">
-                100% Satisfaction Guarantee · Verified Handmade Lithophanes
+              <div className="mt-3 text-[11px] text-center text-[#786a5e] font-sans flex items-center justify-center gap-1.5">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1e7234" strokeWidth="2.2" className="shrink-0">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                <span>Secure 256-bit payment · Fast dispatch across India</span>
               </div>
             </div>
+          </div>
+
+          {/* ── Mobile Sticky Bottom Bar (Zepto/Swiggy Style) ──────── */}
+          <div className="sm:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-[#e8dfd5] p-3 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center justify-between gap-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase font-bold text-[#6e5c50] tracking-wider block">
+                {selectedPaymentModel === "PARTIAL_COD" ? "Advance Due" : "Total to Pay"}
+              </span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-base font-bold text-[#2e1e12] font-sans">
+                  ₹{payNowRupees.toLocaleString("en-IN")}
+                </span>
+                {selectedPaymentModel === "PARTIAL_COD" && (
+                  <span className="text-[10px] text-[#855325] font-medium font-sans">
+                    + ₹{balanceDueRupees.toLocaleString("en-IN")} on delivery
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isProcessing}
+              className="h-11 px-5 rounded-xl bg-[#e07a28] hover:bg-[#c96a1f] active:scale-[0.98] text-white text-xs font-bold font-sans uppercase tracking-wider shadow-[0_2px_8px_rgba(224,122,40,0.3)] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+            >
+              {isProcessing ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <span>
+                    {selectedPaymentModel === "PARTIAL_COD" ? "Pay ₹570" : "Pay Now"}
+                  </span>
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <path
+                      d="M3.5 8h9M8.5 4l4 4-4 4"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </>
+              )}
+            </button>
           </div>
         </form>
       </main>
 
-      {/* ── Add New Address Modal ───────────────────────────── */}
-      {isAddressModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white border border-[#e8dfd5] rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between pb-4 border-b border-[#f2ebdc] mb-5">
-              <div>
-                <h3 className="text-lg font-serif font-bold text-[#2e1e12]">
-                  Add Delivery Address
-                </h3>
-                <p className="text-xs text-[#6e5c50] font-sans mt-0.5">
-                  Where should we ship your personalized lithophane lamp?
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsAddressModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-[#faf7f2] hover:bg-[#f2ebdc] text-[#6e5c50] flex items-center justify-center text-sm font-bold transition-colors"
-              >
-                ✕
-              </button>
-            </div>
+      {/* ── Add New Address Bottom Sheet / Modal ───────────── */}
+      {addressDrawerShouldRender && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop */}
+          <div
+            onClick={() => setIsAddressModalOpen(false)}
+            className={`fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300 ease-out ${
+              addressDrawerAnimateIn ? "opacity-100" : "opacity-0 pointer-events-none"
+            }`}
+            aria-hidden="true"
+          />
 
-            {addressModalError && (
-              <div className="mb-4 bg-[#fdf2f2] border border-[#f5c6cb] text-[#901c1c] text-xs px-3.5 py-2.5 rounded-xl">
-                {addressModalError}
-              </div>
-            )}
+          <div className="fixed inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center p-0 sm:p-4 pointer-events-none">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Add Delivery Address"
+              className={`pointer-events-auto w-full sm:max-w-lg bg-[#faf7f2] rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[88vh] sm:max-h-[85vh] border border-[#e5ddd0] transition-all duration-300 ease-out transform ${
+                addressDrawerAnimateIn
+                  ? "translate-y-0 opacity-100 sm:scale-100"
+                  : "translate-y-full opacity-0 sm:translate-y-4 sm:scale-95"
+              }`}
+            >
+              {/* Mobile Handle Indicator */}
+              <div className="w-12 h-1.5 rounded-full bg-[#d5c7b5] mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
 
-            <form onSubmit={handleSaveNewAddress} className="flex flex-col gap-4 text-xs sm:text-sm font-sans">
-              {/* Address Label Chips */}
-              <div className="flex flex-col gap-1.5">
-                <label className="font-semibold text-[#5a3a1a] text-xs">Address Type</label>
-                <div className="flex gap-2">
-                  {["Home", "Work", "Other"].map((lbl) => (
-                    <button
-                      key={lbl}
-                      type="button"
-                      onClick={() => setModalForm((prev) => ({ ...prev, label: lbl }))}
-                      className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
-                        modalForm.label === lbl
-                          ? "border-[#e07a28] bg-[#fff8f2] text-[#e07a28]"
-                          : "border-[#e8dfd5] text-[#6e5c50] hover:bg-[#faf7f2]"
-                      }`}
-                    >
-                      {lbl}
-                    </button>
-                  ))}
+              {/* Header */}
+              <div className="px-5 sm:px-6 pt-3 pb-3.5 border-b border-[#e5ddd0] flex items-center justify-between shrink-0 bg-white sm:rounded-t-2xl">
+                <div>
+                  <h3 className="text-base sm:text-lg font-serif font-bold text-[#2e1e12]">
+                    {editingAddressId ? "Edit Delivery Address" : "Add Delivery Address"}
+                  </h3>
+                  <p className="text-[11px] sm:text-xs text-[#6e5c50] font-sans mt-0.5">
+                    {editingAddressId
+                      ? "Review or update your delivery destination and contact details"
+                      : "Where should we ship your personalized lithophane lamp?"}
+                  </p>
                 </div>
-              </div>
-
-              {/* Recipient Name & Phone */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-[#5a3a1a] text-xs">
-                    Contact Person <span className="text-[#b83a3a]">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={modalForm.fullName}
-                    onChange={(e) => setModalForm((prev) => ({ ...prev, fullName: e.target.value }))}
-                    placeholder="Recipient's Name"
-                    className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28]"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-[#5a3a1a] text-xs">
-                    Phone Number <span className="text-[#b83a3a]">*</span>
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={modalForm.phone}
-                    onChange={(e) => setModalForm((prev) => ({ ...prev, phone: e.target.value }))}
-                    placeholder="10-digit mobile number"
-                    className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28]"
-                  />
-                </div>
-              </div>
-
-              {/* Street Line 1 */}
-              <div className="flex flex-col gap-1">
-                <label className="font-semibold text-[#5a3a1a] text-xs">
-                  Flat, House No., Building, Street <span className="text-[#b83a3a]">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={modalForm.line1}
-                  onChange={(e) => setModalForm((prev) => ({ ...prev, line1: e.target.value }))}
-                  placeholder="e.g. Flat 301, Silver Oak Apts, 2nd Cross"
-                  className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28]"
-                />
-              </div>
-
-              {/* Street Line 2 */}
-              <div className="flex flex-col gap-1">
-                <label className="font-semibold text-[#5a3a1a] text-xs">
-                  Area, Colony, Landmark (Optional)
-                </label>
-                <input
-                  type="text"
-                  value={modalForm.line2}
-                  onChange={(e) => setModalForm((prev) => ({ ...prev, line2: e.target.value }))}
-                  placeholder="e.g. Near Metro Station, Indiranagar"
-                  className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28]"
-                />
-              </div>
-
-              {/* City, State & Pincode */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-[#5a3a1a] text-xs">
-                    City <span className="text-[#b83a3a]">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={modalForm.city}
-                    onChange={(e) => setModalForm((prev) => ({ ...prev, city: e.target.value }))}
-                    placeholder="e.g. Bengaluru"
-                    className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28]"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-[#5a3a1a] text-xs">
-                    State <span className="text-[#b83a3a]">*</span>
-                  </label>
-                  <select
-                    value={modalForm.state}
-                    onChange={(e) => setModalForm((prev) => ({ ...prev, state: e.target.value }))}
-                    className="bg-white border border-[#dcd4c8] rounded-xl px-2.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28]"
-                  >
-                    {INDIAN_STATES.map((st) => (
-                      <option key={st} value={st}>
-                        {st}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-[#5a3a1a] text-xs">
-                    Pincode <span className="text-[#b83a3a]">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={6}
-                    value={modalForm.pincode}
-                    onChange={(e) =>
-                      setModalForm((prev) => ({
-                        ...prev,
-                        pincode: e.target.value.replace(/\D/g, "").slice(0, 6),
-                      }))
-                    }
-                    placeholder="6 Digits"
-                    className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] font-mono"
-                  />
-                </div>
-              </div>
-
-              {/* Set as Default Checkbox */}
-              <label className="flex items-center gap-2 cursor-pointer mt-1">
-                <input
-                  type="checkbox"
-                  checked={modalForm.isDefault}
-                  onChange={(e) =>
-                    setModalForm((prev) => ({ ...prev, isDefault: e.target.checked }))
-                  }
-                  className="accent-[#e07a28] w-4 h-4 rounded"
-                />
-                <span className="text-xs text-[#5a3a1a]">
-                  Make this my default delivery address
-                </span>
-              </label>
-
-              {/* Modal Actions */}
-              <div className="flex gap-3 justify-end pt-4 border-t border-[#f2ebdc] mt-2">
                 <button
                   type="button"
                   onClick={() => setIsAddressModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-[#e8dfd5] text-xs font-semibold text-[#6e5c50] hover:bg-[#faf7f2] transition-colors"
+                  className="w-8 h-8 rounded-full bg-[#faf7f2] hover:bg-[#f2ebdc] text-[#6e5c50] flex items-center justify-center text-sm font-bold transition-colors cursor-pointer"
+                  aria-label="Close address dialog"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSavingAddress}
-                  className="px-5 py-2.5 rounded-xl bg-[#e07a28] hover:bg-[#c96a1f] text-white text-xs font-bold uppercase tracking-wider transition-colors shadow-md disabled:opacity-50 flex items-center gap-2"
-                >
-                  {isSavingAddress ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <span>Save & Deliver Here</span>
-                  )}
+                  ✕
                 </button>
               </div>
-            </form>
+
+              {/* Scrollable Form Body */}
+              <form
+                onSubmit={handleSaveNewAddress}
+                className="flex-1 overflow-y-auto flex flex-col overscroll-contain"
+              >
+                <div className="p-5 sm:p-6 space-y-4 text-xs sm:text-sm font-sans flex-1">
+                  {addressModalError && (
+                    <div className="bg-[#fdf2f2] border border-[#f5c6cb] text-[#901c1c] text-xs px-3.5 py-2.5 rounded-xl">
+                      {addressModalError}
+                    </div>
+                  )}
+
+                  {/* Section 1: Receiver Details */}
+                  <div className="flex items-center gap-2 pb-1 border-b border-[#f0e8dc]">
+                    <span className="text-xs font-bold text-[#2e1e12]">
+                      Receiver Details
+                    </span>
+                    <span className="text-[11px] text-[#8c7b70]">
+                      (for delivery contact)
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Full Name */}
+                    <div className="flex flex-col gap-1">
+                      <label className="font-semibold text-[#5a3a1a] text-xs">
+                        Full Name <span className="text-[#b83a3a]">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={modalForm.recipientName}
+                        onChange={(e) =>
+                          setModalForm((prev) => ({ ...prev, recipientName: e.target.value }))
+                        }
+                        placeholder="e.g. Rittik Sharma"
+                        className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
+                      />
+                    </div>
+
+                    {/* Mobile Number with +91 badge */}
+                    <div className="flex flex-col gap-1">
+                      <label className="font-semibold text-[#5a3a1a] text-xs">
+                        Mobile Number <span className="text-[#b83a3a]">*</span>
+                      </label>
+                      <div className="flex items-center">
+                        <span className="bg-[#f5ede0] border border-r-0 border-[#dcd4c8] text-[#5a3a1a] text-xs font-bold px-3 py-2.5 rounded-l-xl select-none shrink-0">
+                          +91
+                        </span>
+                        <input
+                          type="tel"
+                          required
+                          maxLength={10}
+                          value={modalForm.phone}
+                          onChange={(e) =>
+                            setModalForm((prev) => ({
+                              ...prev,
+                              phone: e.target.value.replace(/\D/g, "").slice(0, 10),
+                            }))
+                          }
+                          placeholder="10-digit mobile number"
+                          className="w-full bg-white border border-[#dcd4c8] rounded-r-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Alternate Phone Number */}
+                    <div className="sm:col-span-2 flex flex-col gap-1">
+                      <label className="font-semibold text-[#5a3a1a] text-xs">
+                        Alternate Phone{" "}
+                        <span className="text-[#8c7b70] text-[11px] font-normal">
+                          (Optional — backup if primary unreachable)
+                        </span>
+                      </label>
+                      <input
+                        type="tel"
+                        maxLength={10}
+                        value={modalForm.alternatePhone}
+                        onChange={(e) =>
+                          setModalForm((prev) => ({
+                            ...prev,
+                            alternatePhone: e.target.value.replace(/\D/g, "").slice(0, 10),
+                          }))
+                        }
+                        placeholder="Optional 10-digit backup mobile number"
+                        className="w-full bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 2: Address Details */}
+                  <div className="flex items-center gap-2 pt-2 pb-1 border-b border-[#f0e8dc]">
+                    <span className="text-xs font-bold text-[#2e1e12]">
+                      Delivery Address
+                    </span>
+                    <span className="text-[11px] text-[#8c7b70]">
+                      (where courier will deliver)
+                    </span>
+                  </div>
+
+                  {/* Flat / Building */}
+                  <div className="flex flex-col gap-1">
+                    <label className="font-semibold text-[#5a3a1a] text-xs">
+                      Flat, House No., Building, Apartment <span className="text-[#b83a3a]">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={modalForm.line1}
+                      onChange={(e) => setModalForm((prev) => ({ ...prev, line1: e.target.value }))}
+                      placeholder="e.g. Flat 301, Tower B, Silver Oak Residency"
+                      className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
+                    />
+                  </div>
+
+                  {/* Street / Area / Sector */}
+                  <div className="flex flex-col gap-1">
+                    <label className="font-semibold text-[#5a3a1a] text-xs">
+                      Area, Street, Colony, Sector <span className="text-[#b83a3a]">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={modalForm.line2}
+                      onChange={(e) => setModalForm((prev) => ({ ...prev, line2: e.target.value }))}
+                      placeholder="e.g. 12th Main, 4th Block, Koramangala"
+                      className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
+                    />
+                  </div>
+
+                  {/* Landmark */}
+                  <div className="flex flex-col gap-1">
+                    <label className="font-semibold text-[#5a3a1a] text-xs">
+                      Nearby Landmark{" "}
+                      <span className="text-[#8c7b70] text-[11px] font-normal">
+                        (Optional — helps courier locate you)
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      value={modalForm.landmark}
+                      onChange={(e) => setModalForm((prev) => ({ ...prev, landmark: e.target.value }))}
+                      placeholder="e.g. Near Apollo Pharmacy"
+                      className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
+                    />
+                  </div>
+
+                  {/* Pincode, City & State Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {/* Pincode */}
+                    <div className="flex flex-col gap-1">
+                      <label className="font-semibold text-[#5a3a1a] text-xs">
+                        Pincode <span className="text-[#b83a3a]">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={6}
+                        value={modalForm.pincode}
+                        onChange={(e) =>
+                          setModalForm((prev) => ({
+                            ...prev,
+                            pincode: e.target.value.replace(/\D/g, "").slice(0, 6),
+                          }))
+                        }
+                        placeholder="6 digits"
+                        className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
+                      />
+                    </div>
+
+                    {/* City */}
+                    <div className="flex flex-col gap-1">
+                      <label className="font-semibold text-[#5a3a1a] text-xs">
+                        City <span className="text-[#b83a3a]">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={modalForm.city}
+                        onChange={(e) => setModalForm((prev) => ({ ...prev, city: e.target.value }))}
+                        placeholder="e.g. Bengaluru"
+                        className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
+                      />
+                    </div>
+
+                    {/* State using CustomSelect */}
+                    <div className="col-span-2 sm:col-span-1 flex flex-col gap-1">
+                      <label className="font-semibold text-[#5a3a1a] text-xs">
+                        State <span className="text-[#b83a3a]">*</span>
+                      </label>
+                      <CustomSelect
+                        value={modalForm.state}
+                        onChange={(st) => setModalForm((prev) => ({ ...prev, state: st }))}
+                        options={INDIAN_STATES}
+                        placeholder="Select State"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 3: Save Address As Chips */}
+                  <div className="flex flex-col gap-1.5 pt-1">
+                    <label className="font-semibold text-[#5a3a1a] text-xs">
+                      Save Address As
+                    </label>
+                    <div className="flex gap-2">
+                      {[
+                        {
+                          id: "Home",
+                          label: "Home",
+                          icon: (
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                              <polyline points="9 22 9 12 15 12 15 22" />
+                            </svg>
+                          ),
+                        },
+                        {
+                          id: "Work",
+                          label: "Work",
+                          icon: (
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+                              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                            </svg>
+                          ),
+                        },
+                        {
+                          id: "Other",
+                          label: "Other",
+                          icon: (
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                              <circle cx="12" cy="10" r="3" />
+                            </svg>
+                          ),
+                        },
+                      ].map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setModalForm((prev) => ({ ...prev, label: item.id }))}
+                          className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                            modalForm.label === item.id
+                              ? "border-[#e07a28] bg-[#fff8f2] text-[#e07a28] shadow-2xs"
+                              : "border-[#e5ddd0] text-[#6e5c50] hover:bg-[#faf7f2] bg-white"
+                          }`}
+                        >
+                          {item.icon}
+                          <span>{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Set as Default Checkbox */}
+                  <label className="flex items-center gap-2 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={modalForm.isDefault}
+                      onChange={(e) =>
+                        setModalForm((prev) => ({ ...prev, isDefault: e.target.checked }))
+                      }
+                      className="accent-[#e07a28] w-4 h-4 rounded cursor-pointer"
+                    />
+                    <span className="text-xs text-[#5a3a1a]">
+                      Make this my default delivery address
+                    </span>
+                  </label>
+                </div>
+
+                {/* Sticky Action Footer */}
+                <div className="p-3.5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-5 bg-white border-t border-[#e5ddd0] flex items-center gap-2.5 shrink-0 sm:rounded-b-2xl">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddressModalOpen(false)}
+                    className="h-11 px-4 rounded-xl border border-[#d5c7b5] text-xs font-semibold text-[#5a3a1a] hover:bg-[#faf7f2] active:bg-[#f0e8dc] transition-colors cursor-pointer shrink-0 flex items-center justify-center"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingAddress}
+                    className="h-11 flex-1 px-4 rounded-xl bg-[#e07a28] hover:bg-[#c96a1f] active:scale-[0.99] text-white text-xs sm:text-sm font-bold tracking-wide transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                  >
+                    {isSavingAddress ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>{editingAddressId ? "Updating..." : "Saving..."}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>{editingAddressId ? "Update Address" : "Save Address"}</span>
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                          <path d="M3.5 8h9M8.5 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
+
+      {/* ── Coupon Drawer ─────────────────────────────────── */}
+      <CouponDrawer
+        isOpen={isCouponDrawerOpen}
+        onClose={() => setIsCouponDrawerOpen(false)}
+        subtotal={subtotal}
+        appliedCouponCode={appliedPromo?.coupon.code || null}
+        onApplyCoupon={async (code: string) => {
+          const res = await couponApi.validate(code, Math.round(subtotal * 100));
+          if (res.success && res.data?.coupon) {
+            setAppliedPromo(res.data);
+            setPromoInput(code);
+            setPromoError("");
+            return true;
+          }
+          return false;
+        }}
+        onRemoveCoupon={() => {
+          setAppliedPromo(null);
+          setPromoInput("");
+          setPromoError("");
+        }}
+      />
     </div>
   );
 }

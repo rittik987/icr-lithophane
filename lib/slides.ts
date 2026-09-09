@@ -1,14 +1,15 @@
 import { ASSETS } from "./assets";
+import { StorefrontProduct } from "./api";
 
 export interface Slide {
-  id: number;
+  id: number | string;
   src: string;
   alt: string;
   label: string;
   isVideo: boolean;
 }
 
-export const SLIDES: Slide[] = [
+export const DEFAULT_SLIDES: Slide[] = [
   {
     id: 0,
     src: ASSETS.slideBacklitDimRoom,
@@ -38,3 +39,21 @@ export const SLIDES: Slide[] = [
     isVideo: false,
   },
 ];
+
+export const SLIDES: Slide[] = DEFAULT_SLIDES;
+
+export function adaptProductMediaToSlides(product?: StorefrontProduct | null): Slide[] {
+  if (!product || !Array.isArray(product.media) || product.media.length === 0) {
+    return DEFAULT_SLIDES;
+  }
+
+  const sortedMedia = [...product.media].sort((a, b) => a.displayOrder - b.displayOrder);
+
+  return sortedMedia.map((m, index) => ({
+    id: m.id || index,
+    src: m.url,
+    alt: m.altText || product.name || "ICR Lithophane Lamp",
+    label: m.caption || (m.type === "VIDEO" ? "Video Demo" : m.isPrimary ? "Primary View" : `Detail ${index + 1}`),
+    isVideo: m.type === "VIDEO",
+  }));
+}

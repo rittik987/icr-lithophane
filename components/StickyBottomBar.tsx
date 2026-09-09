@@ -4,10 +4,32 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ASSETS } from "@/lib/assets";
 import { useAuth } from "@/context/AuthContext";
+import { StorefrontProduct } from "@/lib/api";
 
-export default function StickyBottomBar() {
+interface StickyBottomBarProps {
+  product?: StorefrontProduct | null;
+}
+
+export default function StickyBottomBar({ product }: StickyBottomBarProps) {
   const router = useRouter();
   const { user } = useAuth();
+
+  const sellingPrice =
+    product?.sellingPrice !== undefined
+      ? Math.round(product.sellingPrice / 100)
+      : 2999;
+  const mrp =
+    product?.mrp !== undefined ? Math.round(product.mrp / 100) : 4999;
+
+  const discountPercent =
+    mrp > sellingPrice && mrp > 0
+      ? Math.round(((mrp - sellingPrice) / mrp) * 100)
+      : 0;
+
+  const discountText =
+    discountPercent > 0
+      ? `${discountPercent}% OFF • FREE DELIVERY`
+      : "FREE PAN-INDIA DELIVERY";
 
   function handleOrderClick() {
     if (!user) {
@@ -28,14 +50,16 @@ export default function StickyBottomBar() {
         <div className="flex flex-col gap-1">
           <div className="flex items-baseline gap-2 leading-none">
             <span className="text-[#2e1e12] text-xl font-bold leading-none font-sans">
-              ₹2,999
+              ₹{sellingPrice.toLocaleString("en-IN")}
             </span>
-            <span className="text-[#6e5c50] text-xs line-through font-sans">
-              ₹4,999
-            </span>
+            {mrp > 0 && (
+              <span className="text-[#6e5c50] text-xs line-through font-sans">
+                ₹{mrp.toLocaleString("en-IN")}
+              </span>
+            )}
           </div>
           <span className="text-[#1e7234] text-[10px] font-semibold tracking-wide uppercase font-sans">
-            40% OFF • FREE DELIVERY
+            {discountText}
           </span>
         </div>
 

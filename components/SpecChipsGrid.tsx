@@ -45,11 +45,82 @@ const SPECS: SpecChip[] = [
   },
 ];
 
-export default function SpecChipsGrid() {
+interface SpecChipsGridProps {
+  highlights?: string[];
+}
+
+export default function SpecChipsGrid({ highlights }: SpecChipsGridProps) {
+  const specs: SpecChip[] =
+    highlights && highlights.length > 0
+      ? highlights.map((h, i) => {
+          const colonIndex = h.indexOf(":");
+          const label =
+            colonIndex > -1
+              ? h.slice(0, colonIndex).trim().toUpperCase()
+              : `SPEC ${i + 1}`;
+          const value =
+            colonIndex > -1 ? h.slice(colonIndex + 1).trim() : h.trim();
+
+          if (label.includes("PROPORTION") || label.includes("SIZE")) {
+            return {
+              icon: ASSETS.iconProportion,
+              iconW: 16.67,
+              iconH: 13.33,
+              label,
+              value,
+              altText: "Proportion icon",
+            };
+          }
+          if (label.includes("LIGHT") || label.includes("LED")) {
+            return {
+              icon: ASSETS.iconLed,
+              iconW: 18.33,
+              iconH: 18.33,
+              label,
+              value,
+              altText: "LED icon",
+            };
+          }
+          if (
+            label.includes("WOOD") ||
+            label.includes("FRAME") ||
+            label.includes("FRAMING")
+          ) {
+            return {
+              icon: ASSETS.iconWood,
+              iconW: 20,
+              iconH: 16.67,
+              label,
+              value,
+              altText: "Wood icon",
+            };
+          }
+          if (label.includes("POWER") || label.includes("CABLE")) {
+            return {
+              icon: ASSETS.iconPower,
+              iconW: 10,
+              iconH: 15,
+              label,
+              value,
+              altText: "Power icon",
+            };
+          }
+          const fallback = SPECS[i % SPECS.length];
+          return {
+            icon: fallback.icon,
+            iconW: fallback.iconW,
+            iconH: fallback.iconH,
+            label,
+            value,
+            altText: "Spec icon",
+          };
+        })
+      : SPECS;
+
   return (
     <section className="px-4 py-2 w-full">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-        {SPECS.map((spec) => (
+        {specs.map((spec) => (
           <div
             key={spec.label}
             className="bg-white border border-[#e5ddd0] rounded-lg p-[13px] flex items-center gap-2.5 h-20 shadow-[0_1px_1px_rgba(0,0,0,0.05)]"

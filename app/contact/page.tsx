@@ -32,14 +32,23 @@ export default function ContactUsPage() {
     });
   }
 
+  function handleBack() {
+    if (typeof window !== "undefined" && window.history.length > 2) {
+      router.back();
+    } else {
+      router.replace("/");
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#faf7f2] text-[#2e1e12] flex flex-col">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md bg-[rgba(250,247,242,0.96)] border-b border-[#e5ddd0]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <button
-            onClick={() => router.back()}
-            className="flex items-center gap-1.5 text-[#6e5c50] hover:text-[#2e1e12] font-sans text-sm font-medium transition-colors"
+            onClick={handleBack}
+            className="flex items-center gap-1.5 text-[#6e5c50] hover:text-[#2e1e12] font-sans text-sm font-medium transition-colors z-10 cursor-pointer"
+            aria-label="Go back"
           >
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
               <path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -47,18 +56,25 @@ export default function ContactUsPage() {
             <span>Back</span>
           </button>
 
-          <Link href="/" className="relative w-16 h-8 shrink-0">
-            <Image
-              src={ASSETS.logo}
-              alt="ICR Custom Creations"
-              fill
-              sizes="64px"
-              className="object-contain"
-              unoptimized
-            />
-          </Link>
+          {/* Center: Logo */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto flex items-center justify-center">
+            <Link
+              href="/"
+              className="relative w-24 h-24 flex items-center justify-center shrink-0 block hover:opacity-90 transition-opacity"
+              aria-label="ICR Custom Creations Home"
+            >
+              <Image
+                src={ASSETS.logo}
+                alt="ICR Custom Creations"
+                fill
+                sizes="96px"
+                className="object-contain object-center"
+                priority
+              />
+            </Link>
+          </div>
 
-          <div className="w-12" />
+          <div className="w-12" aria-hidden="true" />
         </div>
       </header>
 
