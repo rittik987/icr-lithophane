@@ -3,13 +3,16 @@
 import useEmblaCarousel from "embla-carousel-react";
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
-import { SLIDES } from "@/lib/slides";
+import { Slide, DEFAULT_SLIDES } from "@/lib/slides";
 
 interface MediaGalleryDesktopProps {
   className?: string;
+  slides?: Slide[];
 }
 
-export default function MediaGalleryDesktop({ className = "" }: MediaGalleryDesktopProps) {
+export default function MediaGalleryDesktop({ className = "", slides }: MediaGalleryDesktopProps) {
+  const currentSlides = slides && slides.length > 0 ? slides : DEFAULT_SLIDES;
+
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: false,
     align: "center",
@@ -53,7 +56,7 @@ export default function MediaGalleryDesktop({ className = "" }: MediaGalleryDesk
       <div className="relative w-full rounded-2xl overflow-hidden bg-[#f2ebdc] border border-[#e5ddd0] shadow-[0_8px_30px_rgba(46,30,18,0.12)]">
         <div ref={emblaRef} className="overflow-hidden rounded-2xl" style={{ touchAction: "pan-y" }}>
           <div className="flex" style={{ backfaceVisibility: "hidden" }}>
-            {SLIDES.map((slide) => (
+            {currentSlides.map((slide, index) => (
               <div
                 key={slide.id}
                 className="relative shrink-0 w-full"
@@ -65,8 +68,8 @@ export default function MediaGalleryDesktop({ className = "" }: MediaGalleryDesk
                   fill
                   sizes="(max-width: 1024px) 100vw, 650px"
                   className="object-cover"
-                  priority={slide.id === 0}
-                  loading={slide.id === 0 ? "eager" : "lazy"}
+                  priority={index === 0}
+                  loading={index === 0 ? "eager" : "lazy"}
                   unoptimized
                 />
               </div>
@@ -103,14 +106,14 @@ export default function MediaGalleryDesktop({ className = "" }: MediaGalleryDesk
         {/* Image counter — bottom right */}
         <div className="absolute bottom-3 right-3 backdrop-blur-md bg-black/50 border border-white/15 rounded-full px-2.5 py-1 pointer-events-none">
           <span className="text-white text-[11px] font-semibold font-sans tracking-wide">
-            {activeIndex + 1} / {SLIDES.length}
+            {activeIndex + 1} / {currentSlides.length}
           </span>
         </div>
       </div>
 
       {/* ── Thumbnail strip ───────────────────────────────── */}
       <div className="grid grid-cols-4 gap-2">
-        {SLIDES.map((slide, i) => (
+        {currentSlides.map((slide, i) => (
           <button
             key={slide.id}
             aria-label={`View ${slide.label}`}
@@ -136,7 +139,7 @@ export default function MediaGalleryDesktop({ className = "" }: MediaGalleryDesk
 
       {/* Active slide label */}
       <p className="text-[#6e5c50] text-[12px] font-sans text-center tracking-wide">
-        {SLIDES[activeIndex].label}
+        {currentSlides[activeIndex]?.label || ""}
       </p>
 
     </div>

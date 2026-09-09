@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ASSETS } from "@/lib/assets";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/lib/cart";
 import { orderApi, ServerOrder } from "@/lib/api";
 import { OrderCardSkeleton } from "@/components/Skeleton";
 
@@ -49,6 +50,7 @@ function statusStyle(status: string): { bg: string; text: string; border: string
 export default function OrdersListPage() {
   const router = useRouter();
   const { user, isLoading: isAuthLoading } = useAuth();
+  const { totalCount } = useCart();
 
   const [orders, setOrders] = useState<ServerOrder[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
@@ -62,19 +64,15 @@ export default function OrdersListPage() {
   }, [isAuthLoading, user, router]);
 
   // Fetch user orders list
-  useEffect(() => {
+  const fetchOrders = useCallback(() => {
     if (!user) return;
-
-    let mounted = true;
     setIsLoadingOrders(true);
     setErrorMessage("");
 
     orderApi
       .getOrders()
       .then((res) => {
-        if (!mounted) return;
         if (res.success && res.data?.orders) {
-          // Sort newest orders first
           const sorted = [...res.data.orders].sort((a, b) => {
             return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
           });
@@ -84,17 +82,25 @@ export default function OrdersListPage() {
         }
       })
       .catch((err) => {
-        if (!mounted) return;
-        setErrorMessage(err instanceof Error ? err.message : "Failed to load orders.");
+        setErrorMessage("Network error while retrieving orders. Please check your connection.");
       })
       .finally(() => {
-        if (mounted) setIsLoadingOrders(false);
+        setIsLoadingOrders(false);
       });
-
-    return () => {
-      mounted = false;
-    };
   }, [user]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  // Handle pull-to-refresh
+  useEffect(() => {
+    function handlePullRefresh() {
+      fetchOrders();
+    }
+    window.addEventListener("app:pulled-to-refresh", handlePullRefresh);
+    return () => window.removeEventListener("app:pulled-to-refresh", handlePullRefresh);
+  }, [fetchOrders]);
 
   if (isAuthLoading || !user) {
     return (
@@ -114,10 +120,10 @@ export default function OrdersListPage() {
     <div className="min-h-screen bg-[#faf7f2] text-[#2e1e12] flex flex-col font-sans antialiased">
       {/* ── Navigation Bar ─────────────────────────────────── */}
       <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-xl bg-[rgba(250,247,242,0.92)] border-b border-[#e5ddd0] transition-all">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link
             href="/"
-            className="flex items-center gap-1.5 text-xs font-semibold text-[#6e5c50] hover:text-[#2e1e12] transition-colors py-1 px-2 rounded-lg hover:bg-black/[0.03]"
+            className="flex items-center gap-1.5 text-xs font-semibold text-[#6e5c50] hover:text-[#2e1e12] transition-colors py-1 px-2 rounded-lg hover:bg-black/[0.03] z-10"
           >
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
               <path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -125,15 +131,47 @@ export default function OrdersListPage() {
             <span>Home</span>
           </Link>
 
-          <Link href="/" className="relative w-10 h-10 shrink-0 opacity-95 hover:opacity-100 transition-opacity">
-            <Image src={ASSETS.logo} alt="ICR Custom Creations" fill sizes="40px" className="object-contain" priority />
-          </Link>
+          {/* Center: Logo */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto flex items-center justify-center">
+            <Link
+              href="/"
+              className="relative w-24 h-24 flex items-center justify-center shrink-0 block hover:opacity-90 transition-opacity"
+              aria-label="ICR Custom Creations Home"
+            >
+              <Image
+                src={ASSETS.logo}
+                alt="ICR Custom Creations"
+                fill
+                sizes="96px"
+                className="object-contain object-center"
+                priority
+              />
+            </Link>
+          </div>
 
           <Link
             href="/cart"
-            className="text-xs font-bold text-[#e07a28] hover:text-[#c96a1f] transition-colors py-1 px-2 rounded-lg hover:bg-[#e07a28]/5"
+            aria-label={`View cart, ${totalCount} items`}
+            className="relative w-10 h-10 -mr-1 rounded-full flex items-center justify-center text-[#2e1e12] hover:text-[#e07a28] hover:bg-[#f2ebdc] active:bg-[#e8dccb] transition-all cursor-pointer z-10"
           >
-            Bag
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <path d="M16 10a4 4 0 0 1-8 0" />
+            </svg>
+            <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#e07a28] text-white text-[10px] font-bold font-sans flex items-center justify-center leading-none shadow-xs border-2 border-[#faf7f2]">
+              {totalCount}
+            </span>
           </Link>
         </div>
       </header>
@@ -170,7 +208,7 @@ export default function OrdersListPage() {
         )}
 
         {/* Orders loading skeleton */}
-        {isLoadingOrders ? (
+        {isLoadingOrders || isAuthLoading ? (
           <div className="flex flex-col gap-5">
             <OrderCardSkeleton />
             <OrderCardSkeleton />

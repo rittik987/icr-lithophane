@@ -144,7 +144,7 @@ export default function PreviewModal({
 
         {/* Action buttons */}
         <div className="px-4 py-4 border-t border-[#e5ddd0] flex flex-col gap-2.5 shrink-0">
-          {/* Download & Add to Bag in a grid */}
+          {/* Download & Add to Cart in a grid */}
           <div className="grid grid-cols-2 gap-2.5">
             {/* Download */}
             <button
@@ -159,7 +159,7 @@ export default function PreviewModal({
               Download
             </button>
 
-            {/* Add to Bag */}
+            {/* Add to Cart */}
             <button
               onClick={handleAddToCart}
               disabled={isAdding}
@@ -176,14 +176,14 @@ export default function PreviewModal({
                   <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
                     <path d="M3 8.5L6.5 12L13 4" stroke="#1e7234" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                  Added to Bag!
+                  Added to Cart!
                 </>
               ) : (
                 <>
                   <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
                     <path d="M4 5V3a4 4 0 018 0v2M2 5h12l-1 9H3L2 5z" stroke="#c96a1e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
-                  Add to Bag
+                  Add to Cart
                 </>
               )}
             </button>

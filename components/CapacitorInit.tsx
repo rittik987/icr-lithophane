@@ -8,6 +8,15 @@ export default function CapacitorInit() {
   const pathname = usePathname();
 
   useEffect(() => {
+    // 0. Track routes in sessionStorage to prevent navigation loops
+    if (typeof window !== "undefined" && pathname) {
+      const storedCurrent = sessionStorage.getItem("icr_current_route") || "/";
+      if (storedCurrent !== pathname) {
+        sessionStorage.setItem("icr_prev_route", storedCurrent);
+        sessionStorage.setItem("icr_current_route", pathname);
+      }
+    }
+
     let removeBackListener: (() => void) | null = null;
 
     async function initNativeFeatures() {
@@ -26,15 +35,36 @@ export default function CapacitorInit() {
           console.warn("[Capacitor] Status bar configuration warning:", e);
         }
 
-        // 2. Hardware Android Back Button Navigation
+        // 2. Hardware Android Back Button Navigation (Directed Acyclic Graph to prevent loops)
         const { App } = await import("@capacitor/app");
         const backHandle = await App.addListener("backButton", ({ canGoBack }) => {
-          if (pathname && pathname !== "/") {
-            router.back();
+          if (!pathname || pathname === "/") {
+            // At root: native exit
+            App.exitApp();
+          } else if (pathname === "/checkout") {
+            // From checkout: always back to cart
+            router.replace("/cart");
+          } else if (pathname === "/cart") {
+            // From cart: always back to home (never forward into checkout)
+            router.replace("/");
+          } else if (pathname.startsWith("/orders/")) {
+            // From order details: back to orders list
+            router.replace("/orders");
+          } else if (
+            pathname === "/orders" ||
+            pathname === "/account" ||
+            pathname === "/customize" ||
+            pathname === "/login" ||
+            pathname === "/register" ||
+            pathname === "/contact" ||
+            pathname === "/privacy-policy"
+          ) {
+            // Top-level subpages: back to home
+            router.replace("/");
           } else if (canGoBack) {
             router.back();
           } else {
-            App.exitApp();
+            router.replace("/");
           }
         });
 

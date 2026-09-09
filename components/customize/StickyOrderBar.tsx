@@ -9,6 +9,8 @@ interface StickyOrderBarProps {
   uploadedCount: number;
   onPlaceOrder?: () => void;
   loading?: boolean;
+  sellingPrice?: number;
+  mrp?: number;
 }
 
 export default function StickyOrderBar({
@@ -17,6 +19,8 @@ export default function StickyOrderBar({
   uploadedCount,
   onPlaceOrder,
   loading = false,
+  sellingPrice = 2999,
+  mrp = 4999,
 }: StickyOrderBarProps) {
   const remaining = totalSlots - uploadedCount;
 
@@ -32,11 +36,13 @@ export default function StickyOrderBar({
         <div className="flex flex-col gap-1">
           <div className="flex items-baseline gap-2 leading-none">
             <span className="text-[#2e1e12] text-xl font-bold leading-none font-sans">
-              ₹2,999
+              ₹{sellingPrice.toLocaleString("en-IN")}
             </span>
-            <span className="text-[#6e5c50] text-xs line-through font-sans">
-              ₹4,999
-            </span>
+            {mrp > 0 && (
+              <span className="text-[#6e5c50] text-xs line-through font-sans">
+                ₹{mrp.toLocaleString("en-IN")}
+              </span>
+            )}
           </div>
           {isReady ? (
             <span className="text-[#1e7234] text-[10px] font-semibold tracking-wide uppercase font-sans">

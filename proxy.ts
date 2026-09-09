@@ -40,3 +40,5 @@ export const config = {
     "/register",
   ],
 };
+
+export default proxy;

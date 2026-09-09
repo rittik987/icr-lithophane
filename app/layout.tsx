@@ -3,6 +3,7 @@ import "./globals.css";
 import { ToastProvider } from "@/context/ToastContext";
 import { AuthProvider } from "@/context/AuthContext";
 import CapacitorInit from "@/components/CapacitorInit";
+import PullToRefresh from "@/components/PullToRefresh";
 
 export const viewport: Viewport = {
   themeColor: "#ffffff",
@@ -31,11 +32,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
+      <body suppressHydrationWarning>
         <ToastProvider>
           <AuthProvider>
             <CapacitorInit />
-            {children}
+            <PullToRefresh>{children}</PullToRefresh>
           </AuthProvider>
         </ToastProvider>
       </body>

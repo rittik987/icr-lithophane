@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { ASSETS } from "@/lib/assets";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/context/AuthContext";
+import { HeaderAuthSkeleton } from "@/components/Skeleton";
 
 interface HeaderProps {
   cartCount?: number;
@@ -24,10 +25,10 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { totalCount } = useCart();
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
   const cartCount = propCartCount !== undefined ? propCartCount : totalCount;
 
-  function handleBagClick(e: React.MouseEvent) {
+  function handleCartClick(e: React.MouseEvent) {
     if (!user) {
       e.preventDefault();
       router.push("/login?redirect=/cart");
@@ -106,7 +107,7 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
             </Link>
           </div>
 
-          {/* Right actions: Desktop Secondary Nav + Account + Bag */}
+          {/* Right actions: Desktop Secondary Nav + Account + Cart */}
           <div className="flex items-center gap-2.5 ml-auto">
             {/* Desktop right nav links (Order & Contact Us) */}
             <nav aria-label="Secondary navigation" className="hidden lg:flex items-center gap-1">
@@ -128,7 +129,9 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
             </nav>
 
             {/* Desktop Account Button */}
-            {user ? (
+            {isLoading ? (
+              <HeaderAuthSkeleton />
+            ) : user ? (
               <Link
                 href="/account"
                 aria-label="My Account"
@@ -155,17 +158,27 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
             {/* Cart button — guarded */}
             <Link
               href="/cart"
-              onClick={handleBagClick}
+              onClick={handleCartClick}
               aria-label={`View cart, ${cartCount} items`}
-              className="flex items-center gap-1.5 bg-[#e07a28] hover:bg-[#c96a1f] text-white rounded-full px-3.5 py-1.5 shadow-xs transition-all active:scale-[0.97] group cursor-pointer"
+              className="relative w-10 h-10 rounded-full flex items-center justify-center text-[#2e1e12] hover:text-[#e07a28] hover:bg-[#f2ebdc] active:bg-[#e8dccb] transition-all cursor-pointer -mr-1"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 group-hover:scale-105 transition-transform">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
                 <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
                 <line x1="3" y1="6" x2="21" y2="6" />
                 <path d="M16 10a4 4 0 0 1-8 0" />
               </svg>
-              <span className="text-white text-xs font-bold tracking-wider uppercase font-sans">
-                BAG ({cartCount})
+              <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#e07a28] text-white text-[10px] font-bold font-sans flex items-center justify-center leading-none shadow-xs border-2 border-[#faf7f2]">
+                {cartCount}
               </span>
             </Link>
           </div>
@@ -231,7 +244,17 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
         <div className="flex flex-col py-3 px-3 flex-1 overflow-y-auto">
           {/* User Account / Auth Section */}
           <div className="mb-2">
-            {user ? (
+            {isLoading ? (
+              <div className="p-3.5 rounded-2xl bg-white border border-[#e5ddd0] shadow-xs mb-2 animate-pulse">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-[#ede5d6] shrink-0" />
+                  <div className="space-y-1.5 flex-1">
+                    <div className="h-3.5 bg-[#ede5d6] rounded w-24" />
+                    <div className="h-2.5 bg-[#f2ebdc] rounded w-16" />
+                  </div>
+                </div>
+              </div>
+            ) : user ? (
               <div className="p-3.5 rounded-2xl bg-white border border-[#e5ddd0] shadow-xs mb-2">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2.5 min-w-0">

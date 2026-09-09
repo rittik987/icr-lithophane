@@ -9,8 +9,15 @@ import ReviewsSection from "@/components/ReviewsSection";
 import Footer from "@/components/Footer";
 import StickyBottomBar from "@/components/StickyBottomBar";
 import StarRating from "@/components/StarRating";
+import { productApi } from "@/lib/api";
+import { adaptProductMediaToSlides } from "@/lib/slides";
 
-export default function HomePage() {
+export const dynamic = 'force-dynamic';
+
+export default async function HomePage() {
+  const product = await productApi.getActiveProduct();
+  const slides = adaptProductMediaToSlides(product);
+
   return (
     <>
       {/* ── Fixed chrome ──────────────────────────────────────── */}
@@ -30,8 +37,8 @@ export default function HomePage() {
 
             {/* Mobile: vertical stack */}
             <div className="flex flex-col gap-4 lg:hidden">
-              <MediaCarousel />
-              <PriceBlock />
+              <MediaCarousel slides={slides} />
+              <PriceBlock product={product} />
             </div>
 
             {/* Desktop: 2-column product layout */}
@@ -39,7 +46,7 @@ export default function HomePage() {
 
               {/* LEFT — Media gallery with thumbnail strip */}
               <div className="sticky top-18">
-                <MediaGalleryDesktop />
+                <MediaGalleryDesktop slides={slides} />
               </div>
 
               {/* RIGHT — Product purchase panel */}
@@ -48,13 +55,13 @@ export default function HomePage() {
                 {/* Product headline */}
                 <div className="flex flex-col gap-2">
                   <p className="text-[#e07a28] text-[11px] font-bold tracking-[0.2em] uppercase font-sans">
-                    HANDCRAFTED KEEPSAKE
+                    {product?.tagline || "HANDCRAFTED KEEPSAKE"}
                   </p>
                   <h1 className="text-[#2e1e12] text-[32px] font-bold leading-[1.25] font-serif">
-                    Personalised Lithophane Lamp
+                    {product?.name || "Personalised Lithophane Lamp"}
                   </h1>
                   <p className="text-[#6e5c50] text-[14px] font-sans leading-relaxed">
-                    Transform your cherished photo into a warm-glowing 3D keepsake, handcrafted in solid walnut.
+                    {product?.description || "Transform your cherished photo into a warm-glowing 3D keepsake, handcrafted in solid walnut."}
                   </p>
                   {/* Star rating */}
                   <div className="flex items-center gap-2 mt-1">
@@ -67,7 +74,7 @@ export default function HomePage() {
                 <div className="h-px bg-[#e5ddd0]" />
 
                 {/* Price block — full component */}
-                <PriceBlock />
+                <PriceBlock product={product} />
 
               </div>
             </div>
@@ -79,7 +86,7 @@ export default function HomePage() {
           ════════════════════════════════════════════════════════ */}
 
           {/* Spec chips grid */}
-          <SpecChipsGrid />
+          <SpecChipsGrid highlights={product?.highlights} />
 
           {/* How it works timeline */}
           <HowItWorks />
@@ -94,7 +101,7 @@ export default function HomePage() {
       </main>
 
       {/* ── Sticky bottom bar (mobile only, lg:hidden inside) ── */}
-      <StickyBottomBar />
+      <StickyBottomBar product={product} />
     </>
   );
 }
