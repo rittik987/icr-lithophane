@@ -392,8 +392,17 @@ export async function syncCartWithServer(localItems?: CartItem[], force = false)
  * Custom React hook for reactive cart state synchronization across any component.
  */
 export function useCart() {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [items, setItems] = useState<CartItem[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return getCart();
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+  const [isLoaded, setIsLoaded] = useState(() => typeof window !== "undefined");
 
   useEffect(() => {
     const loaded = getCart();

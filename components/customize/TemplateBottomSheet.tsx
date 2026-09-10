@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Drawer } from "vaul";
 import { TemplateConfig } from "@/lib/templates";
 
@@ -56,7 +57,7 @@ export default function TemplateBottomSheet({
                   <button
                     key={t.id}
                     onClick={() => onSelect(t.id)}
-                    className={`relative flex flex-col rounded-xl overflow-hidden border-2 text-left transition-all active:scale-[0.97] ${
+                    className={`relative flex flex-col rounded-sm overflow-hidden border-2 text-left transition-all active:scale-[0.97] ${
                       isSelected
                         ? "border-[#e07a28] shadow-[0_0_0_3px_rgba(224,122,40,0.12)]"
                         : "border-[#e5ddd0] hover:border-[#c9b99f]"
@@ -64,14 +65,13 @@ export default function TemplateBottomSheet({
                   >
                     {/* Template thumbnail */}
                     <div className="relative bg-[#f2ebdc] w-full" style={{ aspectRatio: "4/3" }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <Image
                         src={t.thumbnailSrc}
                         alt={t.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.display = "none";
-                        }}
+                        fill
+                        sizes="(max-width: 640px) 50vw, 200px"
+                        className="object-cover"
+                        unoptimized={t.thumbnailSrc.startsWith("data:") || t.thumbnailSrc.endsWith(".svg") || t.thumbnailSrc.includes("figma.com")}
                       />
                       {/* Fallback */}
                       <div className="absolute inset-0 flex items-center justify-center">

@@ -56,9 +56,9 @@ export default function MediaCarousel({ className = "", slides }: MediaCarouselP
                 fill
                 sizes="(max-width: 768px) 100vw, 600px"
                 className="object-cover"
-                priority={index === 0}
-                loading={index === 0 ? "eager" : "lazy"}
-                unoptimized
+                priority={index <= 1}
+                loading={index <= 1 ? "eager" : "lazy"}
+                unoptimized={slide.src.startsWith("data:") || slide.src.endsWith(".svg") || slide.src.includes("figma.com")}
               />
             </div>
           ))}

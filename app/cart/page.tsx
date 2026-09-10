@@ -143,6 +143,7 @@ export default function CartPage() {
                 sizes="96px"
                 className="object-contain object-center"
                 priority
+                loading="eager"
               />
             </Link>
           </div>
@@ -245,11 +246,13 @@ export default function CartPage() {
                           title="Click to view full preview"
                         >
                           {item.previewDataUrl ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img
+                            <Image
                               src={item.previewDataUrl}
                               alt={item.templateName}
+                              fill
+                              sizes="(max-width: 640px) 80px, 112px"
                               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              unoptimized
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-[#6e5c50] text-xs">
@@ -358,11 +361,13 @@ export default function CartPage() {
                                     {photoList.map((photo) => (
                                       <div key={photo.slotId} className="flex flex-col items-center text-center gap-1">
                                         <div className="relative w-full aspect-square rounded-lg overflow-hidden border border-[#e5ddd0] bg-white">
-                                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                                          <img
+                                          <Image
                                             src={photo.dataUrl}
                                             alt={photo.slotLabel}
+                                            fill
+                                            sizes="80px"
                                             className="w-full h-full object-cover"
+                                            unoptimized
                                           />
                                         </div>
                                         <span className="text-[10px] text-[#6e5c50] truncate w-full">
@@ -699,11 +704,13 @@ export default function CartPage() {
 
             <div className="p-4 overflow-y-auto flex items-center justify-center bg-[#fffdf8]">
               {selectedPreviewItem.previewDataUrl && (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
+                <Image
                   src={selectedPreviewItem.previewDataUrl}
                   alt={selectedPreviewItem.templateName}
+                  width={600}
+                  height={600}
                   className="max-h-[60vh] w-auto object-contain rounded-lg border border-[#e5ddd0] shadow-md"
+                  unoptimized
                 />
               )}
             </div>

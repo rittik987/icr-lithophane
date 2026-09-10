@@ -117,14 +117,15 @@ function RegisterForm() {
           message: "Welcome to ICR Custom Creations",
           type: "success",
         });
-        // Hard replace wipes /register from history so Back never returns to register, and bypasses router cache
+        // Keep loading true so button displays spinner while navigating to root /
         window.location.replace(redirect);
+        return;
       } else {
         setError(res.error || "Registration failed. Mobile number may already be in use.");
+        setLoading(false);
       }
     } catch {
       setError("Unable to connect to server. Please check your connection.");
-    } finally {
       setLoading(false);
     }
   }
@@ -135,14 +136,6 @@ function RegisterForm() {
       message: "Configure GOOGLE_CLIENT_ID in backend .env to enable instant Google Sign-Up",
       type: "info",
     });
-  }
-
-  if (user) {
-    return (
-      <div className="min-h-screen bg-[#FAF7F2] flex items-center justify-center p-4">
-        <div className="w-8 h-8 border-2 border-[#E07A28] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
   }
 
   return (

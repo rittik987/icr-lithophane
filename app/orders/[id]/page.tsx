@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import useSWR from "swr";
 import Link from "next/link";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { ASSETS } from "@/lib/assets";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/lib/cart";
-import { orderApi, ServerOrder } from "@/lib/api";
+import { orderApi } from "@/lib/api";
 import { OrderDetailSkeleton } from "@/components/Skeleton";
 
 function formatRupees(paise: number = 0): string {
@@ -47,10 +48,23 @@ export default function OrderDetailsPage() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const { totalCount } = useCart();
 
-  const [order, setOrder] = useState<ServerOrder | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
   const [copiedId, setCopiedId] = useState(false);
+
+  // SWR: fetch order details with automatic cache across route transitions.
+  // On back-navigation, SWR returns cached data instantly (0 skeleton).
+  const { data: order, error: orderError, isLoading: isLoadingOrder, mutate } = useSWR(
+    user && orderId ? `order-${orderId}` : null,
+    async () => {
+      const res = await orderApi.getOrder(orderId);
+      if (res.success && res.data?.order) {
+        return res.data.order;
+      }
+      throw new Error(res.error || "Order not found.");
+    },
+    { revalidateOnFocus: false, dedupingInterval: 5000 }
+  );
+
+  const errorMessage = orderError?.message || "";
 
   // Review State for Delivered orders
   const [reviewRating, setReviewRating] = useState(5);
@@ -86,37 +100,6 @@ export default function OrderDetailsPage() {
     }
   }, [isAuthLoading, user, router, orderId]);
 
-  // Fetch Order details
-  useEffect(() => {
-    if (!user || !orderId) return;
-
-    let mounted = true;
-    setIsLoading(true);
-    setErrorMessage("");
-
-    orderApi
-      .getOrder(orderId)
-      .then((res) => {
-        if (!mounted) return;
-        if (res.success && res.data?.order) {
-          setOrder(res.data.order);
-        } else {
-          setErrorMessage(res.error || "Order not found.");
-        }
-      })
-      .catch((err) => {
-        if (!mounted) return;
-        setErrorMessage(err instanceof Error ? err.message : "Failed to load order details.");
-      })
-      .finally(() => {
-        if (mounted) setIsLoading(false);
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, [user, orderId]);
-
   const handleCopyOrderId = () => {
     if (!orderId) return;
     navigator.clipboard.writeText(orderId);
@@ -139,10 +122,8 @@ export default function OrderDetailsPage() {
       if (res.success) {
         setReviewSuccess(true);
         setIsEditingReview(false);
-        const updatedOrder = await orderApi.getOrder(orderId);
-        if (updatedOrder.success && updatedOrder.data?.order) {
-          setOrder(updatedOrder.data.order);
-        }
+        // Refresh order data via SWR (re-fetch in background, update cache)
+        mutate();
       } else {
         setReviewError(res.error || "Failed to submit review.");
       }
@@ -153,7 +134,7 @@ export default function OrderDetailsPage() {
     }
   };
 
-  if (isAuthLoading || !user || isLoading) {
+  if (isAuthLoading || !user || isLoadingOrder) {
     return <OrderDetailSkeleton />;
   }
 
@@ -192,6 +173,7 @@ export default function OrderDetailsPage() {
                 sizes="96px"
                 className="object-contain object-center"
                 priority
+                loading="eager"
               />
             </Link>
           </div>
@@ -236,7 +218,7 @@ export default function OrderDetailsPage() {
         )}
 
         {/* Loading Spinner */}
-        {isLoading ? (
+        {isLoadingOrder ? (
           <div className="py-24 flex flex-col items-center justify-center gap-3 text-center">
             <div className="w-8 h-8 border-2 border-[#D47124] border-t-transparent rounded-full animate-spin" />
             <p className="text-xs font-medium text-[#786F66]">Retrieving order details...</p>
@@ -370,12 +352,16 @@ export default function OrderDetailsPage() {
                         {/* Main Item Row */}
                         <div className="flex gap-4 items-start">
                           {item.previewUrl ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img
-                              src={item.previewUrl}
-                              alt={item.templateName || "Keepsake"}
-                              className="w-18 h-18 sm:w-22 sm:h-22 object-cover rounded-2xl border border-[#EAE4DC] shrink-0 shadow-xs"
-                            />
+                            <div className="relative w-18 h-18 sm:w-22 sm:h-22 rounded-2xl overflow-hidden border border-[#EAE4DC] shrink-0 shadow-xs">
+                              <Image
+                                src={item.previewUrl}
+                                alt={item.templateName || "Keepsake"}
+                                fill
+                                sizes="(max-width: 640px) 72px, 88px"
+                                className="object-cover"
+                                unoptimized={item.previewUrl.startsWith("data:") || item.previewUrl.startsWith("blob:")}
+                              />
+                            </div>
                           ) : (
                             <div className="w-18 h-18 sm:w-22 sm:h-22 rounded-2xl bg-[#FAF8F5] border border-[#EAE4DC] flex items-center justify-center text-[11px] font-semibold text-[#786F66] shrink-0">
                               Lamp
@@ -424,12 +410,16 @@ export default function OrderDetailsPage() {
                                   }
                                   className="group flex items-center gap-3 p-2.5 rounded-2xl border border-[#EAE4DC] bg-[#FAF8F5]/70 hover:bg-[#FAF8F5] hover:border-[#D47124]/40 cursor-pointer transition-all shadow-2xs"
                                 >
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img
-                                    src={p.url}
-                                    alt={p.slotLabel || "Photo"}
-                                    className="w-13 h-13 sm:w-14 sm:h-14 object-cover rounded-xl border border-[#EAE4DC] shrink-0 transition-transform group-hover:scale-105"
-                                  />
+                                  <div className="relative w-13 h-13 sm:w-14 sm:h-14 rounded-xl overflow-hidden border border-[#EAE4DC] shrink-0">
+                                    <Image
+                                      src={p.url}
+                                      alt={p.slotLabel || "Photo"}
+                                      fill
+                                      sizes="56px"
+                                      className="object-cover transition-transform group-hover:scale-105"
+                                      unoptimized={p.url.startsWith("data:") || p.url.startsWith("blob:")}
+                                    />
+                                  </div>
                                   <div className="min-w-0 flex-1">
                                     <span className="text-xs font-semibold text-[#1A1412] block truncate">
                                       {p.slotLabel || `Photo ${pIdx + 1}`}
@@ -810,11 +800,13 @@ export default function OrderDetailsPage() {
 
             {/* Warm Ivory Image Frame (App Aesthetics) */}
             <div className="bg-[#FAF8F5] border border-[#EAE4DC] rounded-2xl p-3 sm:p-4 flex items-center justify-center min-h-[260px] max-h-[64vh] overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={activePhoto.url}
                 alt={activePhoto.slotLabel}
+                width={800}
+                height={600}
                 className="max-h-[60vh] max-w-full object-contain rounded-xl shadow-xs"
+                unoptimized={activePhoto.url.startsWith("data:") || activePhoto.url.startsWith("blob:")}
               />
             </div>
 

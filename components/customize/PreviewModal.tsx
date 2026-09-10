@@ -95,7 +95,7 @@ export default function PreviewModal({
       aria-modal="true"
       aria-label="Lithophane preview"
     >
-      <div className="w-full max-w-lg bg-[#faf7f2] rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <div className="w-full max-w-lg bg-[#faf7f2] rounded-sm overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
 
         {/* Modal header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#e5ddd0] shrink-0">
@@ -111,7 +111,7 @@ export default function PreviewModal({
           <button
             onClick={onClose}
             aria-label="Close preview"
-            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#f2ebdc] transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-sm hover:bg-[#f2ebdc] transition-colors"
           >
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
               <path d="M4.5 4.5l9 9M13.5 4.5l-9 9" stroke="#2e1e12" strokeWidth="1.8" strokeLinecap="round" />
@@ -123,7 +123,7 @@ export default function PreviewModal({
         <div className="overflow-y-auto flex-1 p-4">
           <div
             ref={containerRef}
-            className="w-full rounded-xl overflow-hidden border border-[#e5ddd0] shadow-md"
+            className="w-full rounded-sm overflow-hidden border border-[#e5ddd0] shadow-md"
             style={{ background: "#fffdf8" }}
           >
             {containerWidth > 0 && (
@@ -150,7 +150,7 @@ export default function PreviewModal({
             <button
               onClick={handleDownload}
               style={{ color: "#2e1e12" }}
-              className="border-2 border-[#e5ddd0] rounded-xl py-3 font-semibold font-sans text-[13px] flex items-center justify-center gap-1.5 hover:border-[#c9b99f] hover:bg-[#f2ebdc] transition-colors"
+              className="border-2 border-[#e5ddd0] rounded-sm py-3 font-semibold font-sans text-[13px] flex items-center justify-center gap-1.5 hover:border-[#c9b99f] hover:bg-[#f2ebdc] transition-colors"
             >
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                 <path d="M8 2v8M8 10l-3-3M8 10l3-3" stroke="#2e1e12" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -163,7 +163,7 @@ export default function PreviewModal({
             <button
               onClick={handleAddToCart}
               disabled={isAdding}
-              className={`border-2 rounded-xl py-3 font-semibold font-sans text-[13px] flex items-center justify-center gap-1.5 transition-all ${
+              className={`border-2 rounded-sm py-3 font-semibold font-sans text-[13px] flex items-center justify-center gap-1.5 transition-all ${
                 addedSuccess
                   ? "border-[#1e7234] bg-[#eaf5ed] text-[#1e7234]"
                   : "border-[#e07a28] bg-[#fff6ed] text-[#c96a1e] hover:bg-[#fae8d4]"
@@ -189,13 +189,13 @@ export default function PreviewModal({
             </button>
           </div>
 
-          {/* Continue with booking / checkout */}
+          {/* Buy Now / Checkout */}
           <button
             onClick={handleContinue}
             style={{ backgroundColor: "#e07a28", color: "#ffffff" }}
-            className="w-full rounded-xl py-3.5 font-bold font-sans text-[15px] flex items-center justify-center gap-2 hover:bg-[#c96a1e] active:scale-[0.98] transition-all shadow-[0_4px_12px_rgba(224,122,40,0.35)]"
+            className="w-full rounded-sm py-3.5 font-bold font-sans text-[15px] flex items-center justify-center gap-2 hover:bg-[#c96a1e] active:scale-[0.98] transition-all shadow-[0_4px_12px_rgba(224,122,40,0.35)] cursor-pointer"
           >
-            Continue with Booking
+            Buy Now
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <path d="M4 8h8M8 4l4 4-4 4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>

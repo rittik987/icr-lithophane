@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense, useCallback } from "react";
+import useSWR from "swr";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -88,10 +89,22 @@ function CheckoutContent() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const { items, subtotal, isLoaded, clear, remove } = useCart();
 
-  // Saved addresses
-  const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
+  // Saved addresses — shared SWR cache key 'user-addresses' (same as account page)
+  const { data: savedAddresses = [], isLoading: isAddressesLoading, mutate: mutateAddresses } = useSWR(
+    user ? "user-addresses" : null,
+    async () => {
+      const res = await userApi.getAddresses();
+      if (res.success && res.data?.addresses) {
+        return res.data.addresses;
+      }
+      return [];
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 3000,
+    }
+  );
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
-  const [isAddressesLoading, setIsAddressesLoading] = useState(false);
 
   // Address Drawer / Modal state (handles both Add and Edit)
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
@@ -156,7 +169,7 @@ function CheckoutContent() {
     balanceDue?: number;
   } | null>(null);
 
-  // Pre-fill user profile info and fetch saved addresses
+  // Pre-fill user profile info on load
   useEffect(() => {
     if (user) {
       setFormData((prev) => ({
@@ -171,43 +184,33 @@ function CheckoutContent() {
         recipientName: prev.recipientName || user.name || "",
         phone: prev.phone || user.phone || "",
       }));
-
-      setIsAddressesLoading(true);
-      userApi
-        .getAddresses()
-        .then((res) => {
-          if (res.success && res.data?.addresses) {
-            const addrs = res.data.addresses;
-            setSavedAddresses(addrs);
-
-            if (addrs.length > 0) {
-              const defaultAddr = addrs.find((a) => a.isDefault) || addrs[0];
-              setSelectedAddressId(defaultAddr.id);
-              const formattedLine = [
-                defaultAddr.line1,
-                defaultAddr.line2,
-                defaultAddr.landmark ? `Near ${defaultAddr.landmark}` : null,
-              ]
-                .filter(Boolean)
-                .join(", ");
-
-              setFormData((prev) => ({
-                ...prev,
-                fullName: defaultAddr.recipientName || prev.fullName || user.name || "",
-                phone: defaultAddr.phone || prev.phone || user.phone || "",
-                addressLine: formattedLine,
-                city: defaultAddr.city,
-                state: defaultAddr.state,
-                pincode: defaultAddr.pincode,
-              }));
-            }
-          }
-        })
-        .finally(() => {
-          setIsAddressesLoading(false);
-        });
     }
   }, [user]);
+
+  // Auto-select default address and pre-fill form when addresses load
+  useEffect(() => {
+    if (savedAddresses.length > 0 && !selectedAddressId) {
+      const defaultAddr = savedAddresses.find((a) => a.isDefault) || savedAddresses[0];
+      setSelectedAddressId(defaultAddr.id);
+      const formattedLine = [
+        defaultAddr.line1,
+        defaultAddr.line2,
+        defaultAddr.landmark ? `Near ${defaultAddr.landmark}` : null,
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      setFormData((prev) => ({
+        ...prev,
+        fullName: defaultAddr.recipientName || prev.fullName || user?.name || "",
+        phone: defaultAddr.phone || prev.phone || user?.phone || "",
+        addressLine: formattedLine,
+        city: defaultAddr.city,
+        state: defaultAddr.state,
+        pincode: defaultAddr.pincode,
+      }));
+    }
+  }, [savedAddresses, selectedAddressId, user]);
 
   // Fetch available coupons count for Zepto-style coupon banner
   useEffect(() => {
@@ -437,12 +440,15 @@ function CheckoutContent() {
         if (res.success && res.data?.address) {
           const updatedAddr = res.data.address;
 
-          setSavedAddresses((prev) =>
-            prev.map((a) => {
-              if (a.id === updatedAddr.id) return updatedAddr;
-              if (updatedAddr.isDefault) return { ...a, isDefault: false };
-              return a;
-            })
+          // Optimistically update the SWR cache with the updated address
+          mutateAddresses(
+            (prev) =>
+              (prev || []).map((a) => {
+                if (a.id === updatedAddr.id) return updatedAddr;
+                if (updatedAddr.isDefault) return { ...a, isDefault: false };
+                return a;
+              }),
+            { revalidate: false }
           );
 
           // Synchronize currently selected address and checkout shipping form data
@@ -475,12 +481,17 @@ function CheckoutContent() {
         if (res.success && res.data?.address) {
           const newAddr = res.data.address;
 
-          setSavedAddresses((prev) => {
-            if (newAddr.isDefault) {
-              return [newAddr, ...prev.map((a) => ({ ...a, isDefault: false }))];
-            }
-            return [...prev, newAddr];
-          });
+          // Optimistically update the SWR cache with the new address
+          mutateAddresses(
+            (prev) => {
+              const list = prev || [];
+              if (newAddr.isDefault) {
+                return [newAddr, ...list.map((a) => ({ ...a, isDefault: false }))];
+              }
+              return [...list, newAddr];
+            },
+            { revalidate: false }
+          );
 
           setSelectedAddressId(newAddr.id);
           const formattedLine = [
@@ -819,12 +830,16 @@ function CheckoutContent() {
                   className="flex gap-4 items-center bg-[#FAF8F5] p-3 rounded-2xl border border-[#EAE4DC]"
                 >
                   {item.previewDataUrl && (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={item.previewDataUrl}
-                      alt={item.templateName}
-                      className="w-16 h-16 object-cover rounded-xl border border-[#EAE4DC] shrink-0"
-                    />
+                    <div className="relative w-16 h-16 rounded-xl overflow-hidden border border-[#EAE4DC] shrink-0">
+                      <Image
+                        src={item.previewDataUrl}
+                        alt={item.templateName}
+                        fill
+                        sizes="64px"
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
                   )}
                   <div className="flex-1 min-w-0">
                     <span className="text-[10px] bg-[#F5EFE6] text-[#785B3C] px-2 py-0.5 rounded font-bold uppercase tracking-wider">
@@ -854,7 +869,7 @@ function CheckoutContent() {
               </svg>
             </Link>
             <a
-              href={`https://wa.me/919933887019?text=${encodeURIComponent(`Hi ICR, I just placed order #${orderCompleted.orderId.slice(-8).toUpperCase()} for my personalized lithophane lamp!`)}`}
+              href={`https://wa.me/919035765038?text=${encodeURIComponent(`Hi ICR, I just placed order #${orderCompleted.orderId.slice(-8).toUpperCase()} for my personalized lithophane lamp!`)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white hover:bg-[#FAF8F5] border border-[#EAE4DC] text-[#1A1412] text-xs font-bold uppercase tracking-wider px-6 py-3.5 rounded-xl font-sans transition-colors inline-flex items-center justify-center gap-2"
@@ -954,6 +969,7 @@ function CheckoutContent() {
                 sizes="96px"
                 className="object-contain object-center"
                 priority
+                loading="eager"
               />
             </Link>
           </div>
@@ -1421,12 +1437,16 @@ function CheckoutContent() {
                     className="flex gap-3 items-start py-2.5 border-b border-[#f5ede0] last:border-0 group"
                   >
                     {item.previewDataUrl ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
-                        src={item.previewDataUrl}
-                        alt={item.templateName}
-                        className="w-14 h-14 object-cover rounded-lg border border-[#e8dfd5] shrink-0"
-                      />
+                      <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-[#e8dfd5] shrink-0">
+                        <Image
+                          src={item.previewDataUrl}
+                          alt={item.templateName}
+                          fill
+                          sizes="56px"
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </div>
                     ) : (
                       <div className="w-14 h-14 rounded-lg bg-[#faf7f2] border border-[#e8dfd5] flex items-center justify-center text-[10px] text-[#6e5c50]">
                         Lithophane
@@ -2114,63 +2134,95 @@ function CheckoutContent() {
         }}
       />
 
-      {/* ── Payment Recovery Modal ──────────────────────────── */}
+      {/* ── Payment Recovery Modal (Luxury Mobile Bottom Sheet / Centered Desktop Modal) ── */}
       {paymentRecoveryModal?.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-[#FAF8F5] border border-[#EAE4DC] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center animate-scaleUp">
-            <div className="w-14 h-14 bg-[#FFF7ED] border border-[#FED7AA] text-[#D47124] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xs">
-              <svg
-                width="26"
-                height="26"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/65 backdrop-blur-xs animate-fadeIn cursor-pointer"
+          onClick={() => {
+            setPaymentRecoveryModal(null);
+            setErrorMessage("");
+          }}
+        >
+          <div
+            className="bg-[#FAF8F5] border-t sm:border border-[#EAE4DC] rounded-t-[28px] sm:rounded-3xl p-5 sm:p-7 max-w-md w-full shadow-2xl relative text-left max-h-[92vh] overflow-y-auto pb-8 sm:pb-7 pb-[max(2rem,env(safe-area-inset-bottom))] animate-scaleUp cursor-default"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Mobile drag bar */}
+            <div className="w-10 h-1 bg-[#D8CEBE] rounded-full mx-auto mb-4 sm:hidden" aria-hidden="true" />
+
+            {/* Top Close Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setPaymentRecoveryModal(null);
+                setErrorMessage("");
+              }}
+              className="absolute top-4 right-4 sm:top-5 sm:right-5 w-8 h-8 rounded-full bg-[#F0EAE1] hover:bg-[#E5DDD0] text-[#6E5C50] hover:text-[#1A1412] flex items-center justify-center transition-colors cursor-pointer"
+              aria-label="Close modal"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
+            </button>
+
+            {/* Header with warm terracotta badge */}
+            <div className="flex items-center gap-3 mb-3 pr-8">
+              <div className="w-11 h-11 rounded-2xl bg-[#FFF3E8] border border-[#FED7AA] text-[#D47124] flex items-center justify-center shrink-0 shadow-2xs">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#D47124] block font-sans">
+                  Checkout Assistance
+                </span>
+                <h3 className="text-lg sm:text-xl font-serif font-bold text-[#1A1412] leading-snug">
+                  Payment Incomplete
+                </h3>
+              </div>
             </div>
 
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[#D47124] block mb-1">
-              Transaction Interrupted
-            </span>
-            <h3 className="text-xl font-serif font-bold text-[#1A1412] mb-2">
-              {paymentRecoveryModal.title}
-            </h3>
-            <p className="text-xs sm:text-sm text-[#5C534E] leading-relaxed mb-4">
-              {paymentRecoveryModal.message}
+            <p className="text-xs sm:text-sm text-[#6E5C50] leading-relaxed mb-4">
+              {paymentRecoveryModal.message?.toLowerCase().includes("cancelled") || paymentRecoveryModal.message?.toLowerCase().includes("dismiss")
+                ? "Your payment window was closed before completing. Your customized lamp design is fully saved."
+                : paymentRecoveryModal.message || "Your bank or UPI app session timed out. No worry, your order is safely saved."}
             </p>
 
-            <div className="bg-white border border-[#EAE4DC] rounded-2xl p-4 text-left mb-6 text-xs text-[#5C534E] space-y-2">
-              <div className="flex items-center gap-2 text-[#047857] font-semibold">
-                <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor">
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <span>Your customized lamp & photo are safe</span>
+            {/* Reassurance Card */}
+            <div className="bg-white border border-[#EAE4DC] rounded-2xl p-4 mb-5 space-y-3 shadow-2xs">
+              <div className="flex items-start gap-2.5 text-xs">
+                <div className="w-5 h-5 rounded-full bg-[#EAF5EC] text-[#1E7234] flex items-center justify-center shrink-0 mt-0.5">
+                  <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-semibold text-[#1A1412]">Your Photo &amp; Lamp Design are Safe</p>
+                  <p className="text-[11px] text-[#786F66] leading-normal mt-0.5">
+                    Your uploaded photograph, base engraving text, and coupon remain intact.
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-[#047857] font-semibold">
-                <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor">
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <span>Coupon discount was not consumed</span>
+
+              <div className="flex items-start gap-2.5 text-xs pt-2.5 border-t border-[#F2EBDC]">
+                <div className="w-5 h-5 rounded-full bg-[#EAF5EC] text-[#1E7234] flex items-center justify-center shrink-0 mt-0.5">
+                  <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-semibold text-[#1A1412]">No Double-Deduction Guarantee</p>
+                  <p className="text-[11px] text-[#786F66] leading-normal mt-0.5">
+                    If your bank debited any funds, UPI and banking rules automatically refund it within 24–48 hours.
+                  </p>
+                </div>
               </div>
-              <p className="text-[11px] text-[#786F66] pt-1.5 border-t border-[#F0EAE1] leading-normal">
-                If money was deducted by your bank, it will be automatically refunded to your account within 24–48 hours.
-              </p>
             </div>
 
+            {/* Action Buttons */}
             <div className="flex flex-col gap-2.5">
               <button
                 type="button"
@@ -2178,17 +2230,24 @@ function CheckoutContent() {
                   setPaymentRecoveryModal(null);
                   setErrorMessage("");
                 }}
-                className="w-full bg-[#D47124] hover:bg-[#BA5D17] text-white text-xs font-bold uppercase tracking-wider py-3.5 rounded-xl transition-all shadow-sm active:scale-[0.98] cursor-pointer"
+                className="w-full bg-[#D47124] hover:bg-[#BA5D17] text-white text-xs font-bold uppercase tracking-wider py-3.5 px-4 rounded-xl transition-all shadow-sm active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
               >
-                Try Again with UPI, Card, or COD
+                <span>Retry Payment</span>
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                  <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </button>
+
               <a
-                href="https://wa.me/919933887019?text=Hi%20ICR%2C%20I%20had%20an%20issue%20during%20checkout%20for%20my%20personalized%20lithophane%20lamp."
+                href="https://wa.me/919035765038?text=Hello%20ICR%20Studio%2C%20I%20had%20an%20issue%20during%20checkout%20for%20my%20personalized%20lithophane%20lamp."
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full bg-white hover:bg-[#FAF8F5] border border-[#EAE4DC] text-[#1A1412] text-xs font-bold uppercase tracking-wider py-3.5 rounded-xl transition-colors inline-flex items-center justify-center gap-2"
+                className="w-full bg-white hover:bg-[#FAF8F5] border border-[#EAE4DC] text-[#1A1412] hover:text-[#D47124] text-xs font-semibold py-3 px-4 rounded-xl transition-colors inline-flex items-center justify-center gap-2 shadow-2xs"
               >
-                <span>Chat with Artisan WhatsApp Concierge</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366">
+                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.969.587 1.961.913 3.013.913h.005c3.181 0 5.768-2.586 5.769-5.766.001-3.181-2.585-5.768-5.769-5.768zm7.391 10.963c-.416.924-2.146 1.776-3.033 1.896-.807.108-1.854.195-5.326-1.246-4.437-1.843-7.29-6.386-7.51-6.684-.22-.299-1.802-2.399-1.802-4.577 0-2.179 1.139-3.25 1.545-3.693.407-.444.887-.555 1.183-.555.297 0 .593.003.854.016.277.014.646-.105 1.01.767.416.999 1.42 3.469 1.545 3.722.126.253.21.55.042.884-.168.334-.253.541-.5.83-.247.288-.521.644-.744.863-.247.243-.505.508-.217.999.288.491 1.282 2.115 2.753 3.424 1.892 1.684 3.486 2.206 3.981 2.45.495.245.786.205 1.077-.128.291-.334 1.25-1.458 1.583-1.959.334-.5.667-.417 1.125-.25.458.167 2.915 1.375 3.414 1.625.5.25.833.375.958.583.125.208.125 1.208-.291 2.132z"/>
+                </svg>
+                <span>get assistance</span>
               </a>
             </div>
           </div>

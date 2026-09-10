@@ -199,7 +199,10 @@ export default function CustomizeView({ initialProduct }: CustomizeViewProps) {
         {/* Template selector card */}
         <TemplateSelector
           template={template}
-          onChoose={() => setSheetOpen(true)}
+          onChoose={() => setSheetOpen((prev) => !prev)}
+          sellingPrice={sellingPrice}
+          mrp={mrp}
+          isOpen={sheetOpen}
         />
 
         {/* Upload slots — rendered dynamically from template config */}
@@ -219,79 +222,31 @@ export default function CustomizeView({ initialProduct }: CustomizeViewProps) {
           />
         )}
 
-        {/* Preview and Add to Cart buttons — appear once all slots are filled */}
+        {/* Clean Handcrafted Preview Button — appears once all photos are uploaded */}
         {isOrderReady && (
-          <div className="flex flex-col gap-3">
-            {/* Preview button */}
-            <button
-              onClick={() => setPreviewOpen(true)}
-              className="relative w-full overflow-hidden rounded-xl flex items-center gap-4 px-5 py-4 transition-all duration-200 active:scale-[0.98] group"
-              style={{
-                background: "linear-gradient(135deg, #fdf3e8 0%, #f5e6cc 100%)",
-                border: "1.5px solid rgba(224,122,40,0.35)",
-                boxShadow: "0 2px 12px rgba(224,122,40,0.12), inset 0 1px 0 rgba(255,255,255,0.7)",
-              }}
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+            style={{ border: "1px solid #e5ddd0" }}
+            className="w-full h-12 rounded-sm bg-white hover:border-[#d47124] hover:bg-[#fffbf7] active:scale-[0.99] text-[#2e1e12] hover:text-[#d47124] font-semibold text-[14px] font-sans flex items-center justify-center gap-2.5 transition-all shadow-2xs cursor-pointer"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-[#d47124]"
+              aria-hidden="true"
             >
-              {/* Eye icon circle */}
-              <div
-                className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center shadow-sm transition-transform duration-200 group-hover:scale-105"
-                style={{ background: "linear-gradient(135deg, #e07a28 0%, #c96a1e 100%)" }}
-              >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                  <path d="M2 10s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6z" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-                  <circle cx="10" cy="10" r="2.5" stroke="white" strokeWidth="1.6"/>
-                </svg>
-              </div>
-
-              {/* Text block */}
-              <div className="flex flex-col items-start gap-0.5 flex-1">
-                <span
-                  className="text-[#2e1e12] font-bold text-[15px] leading-none"
-                  style={{ fontFamily: "var(--font-family-sans)" }}
-                >
-                  Preview How It Looks
-                </span>
-                <span
-                  className="text-[#6e5c50] text-[11px] leading-none"
-                  style={{ fontFamily: "var(--font-family-sans)" }}
-                >
-                  See your lithophane before ordering
-                </span>
-              </div>
-
-              {/* Arrow */}
-              <svg
-                className="shrink-0 text-[#e07a28] transition-transform duration-200 group-hover:translate-x-0.5"
-                width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"
-              >
-                <path d="M4 9h10M9 4l5 5-5 5" stroke="#e07a28" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-
-            {/* Add to Cart button — directly below preview button */}
-            <button
-              onClick={() => handleAddToCart()}
-              disabled={isAddingToCart}
-              className="relative w-full overflow-hidden rounded-xl flex items-center justify-center gap-3 px-5 py-3.5 transition-all duration-200 active:scale-[0.98] border-2 border-[#e07a28] bg-[#fff8f2] text-[#c96a1e] hover:bg-[#fae8d4] font-bold text-[15px] font-sans shadow-sm cursor-pointer"
-            >
-              {isAddingToCart ? (
-                <div className="flex items-center gap-2">
-                  <svg className="animate-spin w-4 h-4 text-[#c96a1e]" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                  <span>Adding to Cart...</span>
-                </div>
-              ) : (
-                <>
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                    <path d="M4 5V3a4 4 0 018 0v2M2 5h12l-1 11H3L2 5z" stroke="#c96a1e" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  <span>Add to Cart</span>
-                </>
-              )}
-            </button>
-          </div>
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            <span>Preview</span>
+          </button>
         )}
       </main>
 
@@ -324,10 +279,10 @@ export default function CustomizeView({ initialProduct }: CustomizeViewProps) {
         isReady={isOrderReady}
         totalSlots={template.photoSlots.length}
         uploadedCount={uploadedCount}
-        onPlaceOrder={() => handlePlaceOrder()}
-        loading={isPlacingOrder}
-        sellingPrice={sellingPrice}
-        mrp={mrp}
+        onAddToCart={() => handleAddToCart()}
+        onBuyNow={() => handlePlaceOrder()}
+        isAddingToCart={isAddingToCart}
+        isPlacingOrder={isPlacingOrder}
       />
     </div>
   );

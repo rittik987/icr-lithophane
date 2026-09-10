@@ -46,6 +46,7 @@ export default function CancellationRefundPolicyPage() {
                 sizes="96px"
                 className="object-contain object-center"
                 priority
+                loading="eager"
               />
             </Link>
           </div>

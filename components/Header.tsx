@@ -103,6 +103,7 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
                 sizes="96px"
                 className="object-contain object-center"
                 priority
+                loading="eager"
               />
             </Link>
           </div>
@@ -210,6 +211,7 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
                 fill
                 sizes="32px"
                 className="object-cover"
+                loading="eager"
               />
             </div>
             <div>
@@ -237,7 +239,6 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
         {/* Brand micro banner */}
         <div className="px-5 py-2.5 bg-[#eae2d2] border-b border-[#ded4c2] flex items-center justify-between text-[11px] font-medium text-[#6e5c50]">
           <span>Handcrafted Lithophanes</span>
-          <span className="font-bold text-[#e07a28] uppercase tracking-wider text-[10px]">Solid Walnut</span>
         </div>
 
         {/* Navigation list */}
@@ -442,9 +443,6 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#e07a28]">
                   Handcrafted In India
                 </span>
-                <span className="text-[10px] font-bold text-[#2e1e12]">
-                  From ₹1,499
-                </span>
               </div>
               <p className="text-xs font-semibold text-[#2e1e12] mb-3">
                 Create a Custom Backlit Lithophane Lamp
@@ -472,7 +470,7 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
             <span>Crafted with pride in India</span>
           </div>
           <p className="text-[10px] text-[#8f7c6e] text-center mt-0.5">
-            ICR Custom Creations • 100% Solid Walnut
+            ICR Custom Creations
           </p>
         </div>
       </nav>
