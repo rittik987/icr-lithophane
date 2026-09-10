@@ -10,9 +10,12 @@ import { useCart } from "@/lib/cart";
 import { orderApi, ServerOrder } from "@/lib/api";
 import { OrderCardSkeleton } from "@/components/Skeleton";
 
-function formatRupees(paiseOrRupees: number): string {
-  const rupees = paiseOrRupees > 50000 ? Math.round(paiseOrRupees / 100) : paiseOrRupees;
-  return `₹${rupees.toLocaleString("en-IN")}`;
+function formatRupees(paise: number = 0): string {
+  const rupees = (paise || 0) / 100;
+  return `₹${rupees.toLocaleString("en-IN", {
+    minimumFractionDigits: Number.isInteger(rupees) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 function formatDate(isoString: string): string {
@@ -73,7 +76,8 @@ export default function OrdersListPage() {
       .getOrders()
       .then((res) => {
         if (res.success && res.data?.orders) {
-          const sorted = [...res.data.orders].sort((a, b) => {
+          const validOrders = res.data.orders.filter((o) => o.status !== "CANCELLED");
+          const sorted = [...validOrders].sort((a, b) => {
             return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
           });
           setOrders(sorted);

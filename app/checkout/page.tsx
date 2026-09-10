@@ -138,6 +138,12 @@ function CheckoutContent() {
   const [selectedPaymentModel, setSelectedPaymentModel] = useState<PaymentModel>("FULL_ONLINE");
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [paymentRecoveryModal, setPaymentRecoveryModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    orderId?: string;
+  } | null>(null);
 
   const [orderCompleted, setOrderCompleted] = useState<{
     orderId: string;
@@ -646,8 +652,14 @@ function CheckoutContent() {
           }
         },
         modal: {
-          ondismiss: function () {
+          ondismiss: async function () {
             setIsProcessing(false);
+            // Cancel unconfirmed draft order on backend so it never becomes a ghost order
+            try {
+              await orderApi.cancelOrder(order.id, "Customer closed checkout window");
+            } catch (err) {
+              console.warn("Could not cancel draft order on dismiss:", err);
+            }
           },
         },
       };
@@ -655,11 +667,22 @@ function CheckoutContent() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rzpInstance = new (window as any).Razorpay(options);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      rzpInstance.on("payment.failed", function (response: any) {
+      rzpInstance.on("payment.failed", async function (response: any) {
         setIsProcessing(false);
-        setErrorMessage(
-          response?.error?.description || "Payment was not completed. You can retry anytime."
-        );
+        const reason =
+          response?.error?.description || "Payment was declined by your bank or UPI app.";
+        try {
+          await orderApi.cancelOrder(order.id, reason);
+        } catch (err) {
+          console.warn("Could not cancel draft order on failure:", err);
+        }
+
+        setPaymentRecoveryModal({
+          isOpen: true,
+          title: "Payment Could Not Be Completed",
+          message: reason,
+          orderId: order.id,
+        });
       });
 
       rzpInstance.open();
@@ -673,85 +696,111 @@ function CheckoutContent() {
   // ── Order Placed Success View ──────────────────────────────
   if (orderCompleted) {
     return (
-      <div className="min-h-screen bg-[#faf7f2] text-[#2e1e12] py-12 px-4 sm:px-6">
-        <div className="max-w-2xl mx-auto bg-white border border-[#e8dfd5] rounded-3xl p-6 sm:p-10 shadow-xl text-center">
-          {/* Checkmark Icon */}
-          <div className="w-16 h-16 bg-[#eaf5ec] border-2 border-[#1e7234] rounded-full flex items-center justify-center mx-auto mb-5 text-[#1e7234] shadow-sm">
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M20 6L9 17l-5-5" />
-            </svg>
+      <div className="min-h-screen bg-[#FAF8F5] text-[#1A1412] py-12 px-4 sm:px-6">
+        <div className="max-w-2xl mx-auto bg-white border border-[#EAE4DC] rounded-3xl p-6 sm:p-10 shadow-xl text-center">
+          {/* Artisan Glow Badge */}
+          <div className="inline-flex items-center gap-1.5 bg-[#FAF6F0] border border-[#F0EAE1] text-[#D47124] text-[11px] font-bold uppercase tracking-widest px-3.5 py-1.5 rounded-full mb-4 shadow-xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#D47124] animate-pulse"></span>
+            <span>Handcrafted Keepsake Confirmed</span>
           </div>
 
-          <span className="text-[11px] font-bold uppercase tracking-widest text-[#e07a28] font-sans">
-            Payment Confirmed
-          </span>
-          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#2e1e12] mt-1 mb-2">
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#1A1412] mb-2">
             Thank you, {orderCompleted.shipping.fullName}!
           </h1>
-          <p className="text-sm text-[#6e5c50] font-sans mb-6">
-            We have received your order and started preparing your personalized lithophane lamp.
+          <p className="text-xs sm:text-sm text-[#786F66] font-sans max-w-md mx-auto mb-6 leading-relaxed">
+            Your personalized lithophane lamp order is verified and registered with our artisan 3D workshop.
           </p>
 
-          <div className="bg-[#faf7f2] border border-[#e8dfd5] rounded-2xl p-4 sm:p-5 text-left mb-6 font-sans">
-            <div className="flex justify-between items-center pb-3 border-b border-[#e8dfd5]">
-              <span className="text-xs text-[#6e5c50]">Order ID</span>
-              <span className="text-sm font-bold text-[#2e1e12] font-mono">
+          {/* Artisan Production Tracker */}
+          <div className="bg-[#FAF8F5] border border-[#EAE4DC] rounded-2xl p-4 sm:p-5 mb-6 text-left">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#786F66] block mb-3">
+              Artisan Workshop Progress
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+              <div className="bg-white border border-[#A7F3D0] rounded-xl p-2.5 flex flex-col items-center">
+                <span className="w-6 h-6 rounded-full bg-[#ECFDF5] text-[#047857] flex items-center justify-center font-bold text-xs mb-1">
+                  ✓
+                </span>
+                <span className="font-bold text-[#047857] text-[11px]">Verified</span>
+                <span className="text-[10px] text-[#786F66]">Order Placed</span>
+              </div>
+              <div className="bg-white border border-[#D47124] rounded-xl p-2.5 flex flex-col items-center">
+                <span className="w-6 h-6 rounded-full bg-[#FFF7ED] text-[#D47124] flex items-center justify-center font-bold text-xs mb-1 animate-pulse">
+                  2
+                </span>
+                <span className="font-bold text-[#D47124] text-[11px]">In Queue</span>
+                <span className="text-[10px] text-[#786F66]">3D Light Carving</span>
+              </div>
+              <div className="bg-white/60 border border-[#EAE4DC] rounded-xl p-2.5 flex flex-col items-center opacity-70">
+                <span className="w-6 h-6 rounded-full bg-[#FAF8F5] text-[#786F66] flex items-center justify-center font-bold text-xs mb-1">
+                  3
+                </span>
+                <span className="font-semibold text-[#1A1412] text-[11px]">Assembly</span>
+                <span className="text-[10px] text-[#786F66]">Wood & LED Base</span>
+              </div>
+              <div className="bg-white/60 border border-[#EAE4DC] rounded-xl p-2.5 flex flex-col items-center opacity-70">
+                <span className="w-6 h-6 rounded-full bg-[#FAF8F5] text-[#786F66] flex items-center justify-center font-bold text-xs mb-1">
+                  4
+                </span>
+                <span className="font-semibold text-[#1A1412] text-[11px]">Dispatch</span>
+                <span className="text-[10px] text-[#786F66]">Express Transit</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Order Details Breakdown */}
+          <div className="bg-[#FAF8F5] border border-[#EAE4DC] rounded-2xl p-4 sm:p-5 text-left mb-6 font-sans">
+            <div className="flex justify-between items-center pb-3 border-b border-[#EAE4DC]">
+              <span className="text-xs text-[#786F66]">Order Reference</span>
+              <span className="text-sm font-bold text-[#1A1412] font-mono tracking-wide">
                 #{orderCompleted.orderId.slice(-8).toUpperCase()}
               </span>
             </div>
-            <div className="flex justify-between items-center py-3 border-b border-[#e8dfd5]">
-              <span className="text-xs text-[#6e5c50]">Estimated Delivery</span>
-              <span className="text-sm font-semibold text-[#1e7234]">5 - 7 Business Days</span>
+            <div className="flex justify-between items-center py-3 border-b border-[#EAE4DC]">
+              <span className="text-xs text-[#786F66]">Estimated Delivery</span>
+              <span className="text-sm font-semibold text-[#047857]">5 – 7 Business Days</span>
             </div>
-            <div className="flex justify-between items-center py-3 border-b border-[#e8dfd5]">
-              <span className="text-xs text-[#6e5c50]">Delivering to</span>
-              <span className="text-xs font-medium text-[#2e1e12] text-right max-w-[240px] truncate">
+            <div className="flex justify-between items-center py-3 border-b border-[#EAE4DC]">
+              <span className="text-xs text-[#786F66]">Delivering to</span>
+              <span className="text-xs font-medium text-[#1A1412] text-right max-w-[240px] truncate">
                 {orderCompleted.shipping.addressLine}, {orderCompleted.shipping.city} - {orderCompleted.shipping.pincode}
               </span>
             </div>
+
             {orderCompleted.paymentType === "PARTIAL_COD" ? (
               <>
-                <div className="flex justify-between items-center py-3 border-b border-[#e8dfd5]">
-                  <span className="text-xs text-[#6e5c50]">Payment Mode</span>
-                  <span className="text-[11px] font-bold text-[#e07a28] bg-[#fff3e8] border border-[#f5d9c2] px-2.5 py-0.5 rounded-md font-sans">
-                    PARTIAL PAY ON DELIVERY
+                <div className="flex justify-between items-center py-3 border-b border-[#EAE4DC]">
+                  <span className="text-xs text-[#786F66]">Payment Mode</span>
+                  <span className="text-[11px] font-bold text-[#D47124] bg-[#FFF7ED] border border-[#FED7AA] px-2.5 py-0.5 rounded-md font-sans">
+                    Partial COD
                   </span>
                 </div>
-                <div className="flex justify-between items-center py-3 border-b border-[#e8dfd5]">
+                <div className="flex justify-between items-center py-3 border-b border-[#EAE4DC]">
                   <div>
-                    <span className="text-xs text-[#6e5c50] block">Advance Paid Online</span>
-                    <span className="text-[11px] text-[#1e7234]">₹500 item advance + ₹70 courier fee</span>
+                    <span className="text-xs text-[#786F66] block">Advance Paid Online</span>
+                    <span className="text-[11px] text-[#047857]">₹500 craft advance + ₹70 courier handling</span>
                   </div>
-                  <span className="text-sm font-bold text-[#1e7234]">
-                    ₹{Math.round(((orderCompleted.advanceAmount || 50000) + (orderCompleted.shippingCharge || 7000)) / 100).toLocaleString("en-IN")}
+                  <span className="text-sm font-bold text-[#047857]">
+                    ₹{Math.round(((orderCompleted.advanceAmount ?? 50000) + (orderCompleted.shippingCharge ?? 7000)) / 100).toLocaleString("en-IN")}
                   </span>
                 </div>
                 <div className="flex justify-between items-center pt-3">
                   <div>
-                    <span className="text-sm font-bold text-[#2e1e12] block">Balance Due on Delivery</span>
-                    <span className="text-[11px] text-[#6e5c50]">Payable at your doorstep via Cash or UPI</span>
+                    <span className="text-sm font-bold text-[#1A1412] block">Balance Due on Delivery</span>
+                    <span className="text-[11px] text-[#786F66]">Payable at your doorstep via Cash or UPI</span>
                   </div>
-                  <span className="text-lg font-sans font-bold text-[#e07a28]">
-                    ₹{Math.round((orderCompleted.balanceDue || 0) / 100).toLocaleString("en-IN")}
+                  <span className="text-lg font-sans font-bold text-[#D47124]">
+                    ₹{Math.round((orderCompleted.balanceDue ?? 0) / 100).toLocaleString("en-IN")}
                   </span>
                 </div>
               </>
             ) : (
               <div className="flex justify-between items-center pt-3">
                 <div>
-                  <span className="text-sm font-bold text-[#2e1e12] block">Total Paid Online</span>
-                  <span className="text-[11px] text-[#1e7234]">100% Paid · Free Insured Delivery</span>
+                  <span className="text-sm font-bold text-[#1A1412] block">Total Paid Online</span>
+                  <span className="text-[11px] text-[#047857]">100% Paid · Free Insured Delivery</span>
                 </div>
-                <span className="text-lg font-sans font-bold text-[#1e7234]">
+                <span className="text-lg font-sans font-bold text-[#047857]">
                   ₹{orderCompleted.total.toLocaleString("en-IN")}
                 </span>
               </div>
@@ -760,31 +809,31 @@ function CheckoutContent() {
 
           {/* Render preview of ordered items */}
           <div className="text-left mb-8">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#6e5c50] font-sans mb-3">
-              Customized Keepsakes in this Order:
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#786F66] font-sans mb-3">
+              Keepsakes in this Order:
             </h3>
             <div className="flex flex-col gap-3">
               {orderCompleted.items.map((item) => (
                 <div
                   key={item.id}
-                  className="flex gap-4 items-center bg-[#faf7f2] p-3 rounded-xl border border-[#e8dfd5]"
+                  className="flex gap-4 items-center bg-[#FAF8F5] p-3 rounded-2xl border border-[#EAE4DC]"
                 >
                   {item.previewDataUrl && (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={item.previewDataUrl}
                       alt={item.templateName}
-                      className="w-16 h-16 object-cover rounded-lg border border-[#e8dfd5] shrink-0"
+                      className="w-16 h-16 object-cover rounded-xl border border-[#EAE4DC] shrink-0"
                     />
                   )}
                   <div className="flex-1 min-w-0">
-                    <span className="text-[10px] bg-[#f2ebdc] text-[#5a3a1a] px-2 py-0.5 rounded font-bold uppercase font-sans">
-                      {item.templateName}
+                    <span className="text-[10px] bg-[#F5EFE6] text-[#785B3C] px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                      {item.templateName || "Personalized Lamp"}
                     </span>
-                    <h4 className="text-xs font-serif font-semibold text-[#2e1e12] mt-0.5 truncate">
+                    <h4 className="text-xs sm:text-sm font-serif font-bold text-[#1A1412] mt-0.5 truncate">
                       Personalized Lithophane Lamp
                     </h4>
-                    <span className="text-xs text-[#6e5c50] font-sans">
+                    <span className="text-xs text-[#786F66] font-sans">
                       Qty: {item.quantity} · ₹{(item.price * item.quantity).toLocaleString("en-IN")}
                     </span>
                   </div>
@@ -793,22 +842,25 @@ function CheckoutContent() {
             </div>
           </div>
 
+          {/* Actions & WhatsApp Support */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               href={`/orders/${orderCompleted.orderId}`}
-              className="bg-[#e07a28] hover:bg-[#c96a1f] text-white text-xs font-bold uppercase tracking-wider px-6 py-3.5 rounded-xl font-sans transition-all shadow-md inline-flex items-center justify-center gap-1.5"
+              className="bg-[#D47124] hover:bg-[#BA5D17] text-white text-xs font-bold uppercase tracking-wider px-6 py-3.5 rounded-xl font-sans transition-all shadow-sm inline-flex items-center justify-center gap-1.5 active:scale-[0.98]"
             >
-              <span>View Order Details</span>
+              <span>View Order & Tracking</span>
               <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
-                <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </Link>
-            <Link
-              href="/orders"
-              className="bg-[#FAF8F5] hover:bg-[#F3EFE9] border border-[#EAE4DC] text-[#2e1e12] text-xs font-bold uppercase tracking-wider px-6 py-3.5 rounded-xl font-sans transition-colors inline-flex items-center justify-center"
+            <a
+              href={`https://wa.me/919933887019?text=${encodeURIComponent(`Hi ICR, I just placed order #${orderCompleted.orderId.slice(-8).toUpperCase()} for my personalized lithophane lamp!`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white hover:bg-[#FAF8F5] border border-[#EAE4DC] text-[#1A1412] text-xs font-bold uppercase tracking-wider px-6 py-3.5 rounded-xl font-sans transition-colors inline-flex items-center justify-center gap-2"
             >
-              All Orders
-            </Link>
+              <span>Artisan WhatsApp Concierge</span>
+            </a>
           </div>
         </div>
       </div>
@@ -1178,8 +1230,8 @@ function CheckoutContent() {
               </div>
 
               {/* Mode Selection Cards: Pay Online vs Pay on Delivery */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
-                {/* Full Online Option */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                {/* 100% Online Option */}
                 <div
                   role="button"
                   tabIndex={0}
@@ -1190,41 +1242,45 @@ function CheckoutContent() {
                       setSelectedPaymentModel("FULL_ONLINE");
                     }
                   }}
-                  className={`p-3 rounded-xl border-2 transition-all cursor-pointer text-left ${
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer text-left relative flex flex-col justify-between ${
                     selectedPaymentModel === "FULL_ONLINE"
-                      ? "border-[#e07a28] bg-[#fffaf5] shadow-xs"
-                      : "border-[#e8dfd5] hover:border-[#d5c7b5] bg-white"
+                      ? "border-[#D47124] bg-[#FAF6F0] ring-1 ring-[#D47124]/30 shadow-xs"
+                      : "border-[#EAE4DC] hover:border-[#D5C7B5] bg-white"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div
-                        className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
-                          selectedPaymentModel === "FULL_ONLINE"
-                            ? "border-[#e07a28] bg-[#e07a28]"
-                            : "border-[#b8a99a] bg-white"
-                        }`}
-                      >
-                        {selectedPaymentModel === "FULL_ONLINE" && (
-                          <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                        )}
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
+                            selectedPaymentModel === "FULL_ONLINE"
+                              ? "border-[#D47124] bg-[#D47124]"
+                              : "border-[#C4BCB3] bg-white"
+                          }`}
+                        >
+                          {selectedPaymentModel === "FULL_ONLINE" && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                          )}
+                        </div>
+                        <span className="font-bold text-xs sm:text-sm text-[#1A1412] font-sans truncate">
+                          100% Online Payment
+                        </span>
                       </div>
-                      <span className="font-bold text-xs sm:text-sm text-[#2e1e12] font-sans truncate">
-                        Pay Full Online
+                      <span className="text-[10px] font-bold text-[#047857] bg-[#ECFDF5] border border-[#A7F3D0] px-2 py-0.5 rounded-full uppercase shrink-0">
+                        Free Delivery
                       </span>
                     </div>
-                    <span className="text-[9px] font-bold text-[#1e7234] bg-[#eaf5ec] px-1.5 py-0.5 rounded uppercase shrink-0">
-                      Free Delivery
-                    </span>
+
+                    <p className="pl-6 text-xs text-[#786F66] font-sans leading-relaxed">
+                      Instant confirmation via UPI, GPay, PhonePe, Cards, or Net Banking. Zero doorstep fee.
+                    </p>
                   </div>
 
-                  <div className="pl-5.5 text-xs text-[#6e5c50] font-sans leading-snug">
-                    <div>
-                      Pay <span className="font-bold text-[#2e1e12]">₹{finalTotal.toLocaleString("en-IN")}</span> online now
-                    </div>
-                    <div className="text-[11px] text-[#1e7234] font-medium mt-0.5">
-                      Saves ₹70 courier handling fee
-                    </div>
+                  <div className="pl-6 pt-3 mt-3 border-t border-[#EAE4DC]/70 flex items-baseline justify-between">
+                    <span className="text-[10px] text-[#786F66] uppercase font-bold tracking-wider">Pay Online</span>
+                    <span className="text-sm font-bold text-[#1A1412]">
+                      ₹{finalTotal.toLocaleString("en-IN")}
+                    </span>
                   </div>
                 </div>
 
@@ -1239,128 +1295,108 @@ function CheckoutContent() {
                       setSelectedPaymentModel("PARTIAL_COD");
                     }
                   }}
-                  className={`p-3 rounded-xl border-2 transition-all cursor-pointer text-left ${
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer text-left relative flex flex-col justify-between ${
                     selectedPaymentModel === "PARTIAL_COD"
-                      ? "border-[#e07a28] bg-[#fffaf5] shadow-xs"
-                      : "border-[#e8dfd5] hover:border-[#d5c7b5] bg-white"
+                      ? "border-[#D47124] bg-[#FAF6F0] ring-1 ring-[#D47124]/30 shadow-xs"
+                      : "border-[#EAE4DC] hover:border-[#D5C7B5] bg-white"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div
-                        className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
-                          selectedPaymentModel === "PARTIAL_COD"
-                            ? "border-[#e07a28] bg-[#e07a28]"
-                            : "border-[#b8a99a] bg-white"
-                        }`}
-                      >
-                        {selectedPaymentModel === "PARTIAL_COD" && (
-                          <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                        )}
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
+                            selectedPaymentModel === "PARTIAL_COD"
+                              ? "border-[#D47124] bg-[#D47124]"
+                              : "border-[#C4BCB3] bg-white"
+                          }`}
+                        >
+                          {selectedPaymentModel === "PARTIAL_COD" && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                          )}
+                        </div>
+                        <span className="font-bold text-xs sm:text-sm text-[#1A1412] font-sans truncate">
+                          Pay on Delivery
+                        </span>
                       </div>
-                      <span className="font-bold text-xs sm:text-sm text-[#2e1e12] font-sans truncate">
-                        Pay on Delivery
+                      <span className="text-[10px] font-bold text-[#D47124] bg-[#FFF7ED] border border-[#FED7AA] px-2 py-0.5 rounded-full uppercase shrink-0">
+                        ₹570 Advance
                       </span>
                     </div>
-                    <span className="text-[9px] font-bold text-[#e07a28] bg-[#fff3e8] border border-[#f5d9c2] px-1.5 py-0.5 rounded uppercase shrink-0">
-                      ₹570 Advance
-                    </span>
+
+                    <p className="pl-6 text-xs text-[#786F66] font-sans leading-relaxed">
+                      ₹500 custom item advance + ₹70 courier handling now. Balance payable on delivery.
+                    </p>
                   </div>
 
-                  <div className="pl-5.5 text-xs text-[#6e5c50] font-sans leading-snug">
-                    <div>
-                      Pay <span className="font-bold text-[#2e1e12]">₹570 online now</span>
-                    </div>
-                    <div className="text-[11px] text-[#855325] font-medium mt-0.5">
-                      Pay rest ₹{codBalanceDue.toLocaleString("en-IN")} on delivery
-                    </div>
+                  <div className="pl-6 pt-3 mt-3 border-t border-[#EAE4DC]/70 flex items-baseline justify-between">
+                    <span className="text-[10px] text-[#786F66] uppercase font-bold tracking-wider">Pay Online</span>
+                    <span className="text-sm font-bold text-[#1A1412]">
+                      ₹{codPayNowTotal.toLocaleString("en-IN")}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Clear Financial Breakdown for Selected Mode */}
-              {selectedPaymentModel === "PARTIAL_COD" ? (
-                <div className="bg-[#faf7f2] border border-[#e8dfd5] rounded-xl p-3 sm:p-3.5 font-sans">
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-[#6e5c50] mb-2 pb-1.5 border-b border-[#e8dfd5] flex items-center justify-between">
-                    <span>Advance Payment Breakdown</span>
-                    <span className="text-[10px] text-[#e07a28] font-bold bg-[#fff3e8] px-2 py-0.5 rounded border border-[#f5d9c2]">
-                      Partial COD
+              {/* Financial Transparency Summary Block */}
+              <div className="bg-[#FAF8F5] border border-[#EAE4DC] rounded-2xl p-4 sm:p-5 font-sans">
+                <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-[#EAE4DC]">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#786F66]">
+                    Payment Breakdown
+                  </span>
+                  <span className="text-[11px] font-bold text-[#1A1412]">
+                    {selectedPaymentModel === "PARTIAL_COD" ? "Partial COD Model" : "Full Online Model"}
+                  </span>
+                </div>
+
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between items-center text-[#5C534E]">
+                    <span>Cart Items Subtotal</span>
+                    <span className="font-medium text-[#1A1412]">₹{subtotal.toLocaleString("en-IN")}</span>
+                  </div>
+
+                  {discountRupees > 0 && (
+                    <div className="flex justify-between items-center text-[#047857]">
+                      <span>Promo Savings {appliedPromo?.coupon.code ? `(${appliedPromo.coupon.code})` : ""}</span>
+                      <span className="font-semibold">- ₹{discountRupees.toLocaleString("en-IN")}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center text-[#5C534E]">
+                    <span>Insured Delivery & Handling</span>
+                    {selectedPaymentModel === "PARTIAL_COD" ? (
+                      <span className="font-medium text-[#1A1412]">₹70</span>
+                    ) : (
+                      <span className="font-semibold text-[#047857]">Complimentary (Free)</span>
+                    )}
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2.5 border-t border-[#EAE4DC] text-sm font-bold text-[#1A1412]">
+                    <span>Due Online Now</span>
+                    <span className="text-base text-[#D47124]">
+                      ₹{payNowRupees.toLocaleString("en-IN")}
                     </span>
                   </div>
 
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex justify-between items-center text-[#5a3a1a]">
-                      <span>Custom item advance</span>
-                      <span className="font-medium text-[#2e1e12]">₹500</span>
-                    </div>
-                    <div className="flex justify-between items-center text-[#5a3a1a]">
-                      <span>Courier and COD handling fee</span>
-                      <span className="font-medium text-[#2e1e12]">+₹70</span>
-                    </div>
-                    <div className="flex justify-between items-center pt-2 border-t border-[#e8dfd5] font-bold">
-                      <span className="text-[#2e1e12]">Payable online now</span>
-                      <span className="text-[#e07a28] text-sm">₹570</span>
-                    </div>
-                    <div className="flex justify-between items-center pt-1 text-[#5a3a1a]">
-                      <span>Balance payable on doorstep delivery</span>
-                      <span className="font-bold text-[#2e1e12]">
-                        ₹{codBalanceDue.toLocaleString("en-IN")}
+                  {selectedPaymentModel === "PARTIAL_COD" && (
+                    <div className="flex justify-between items-center pt-1.5 text-xs text-[#5C534E]">
+                      <span>Balance on Delivery (Cash or UPI)</span>
+                      <span className="font-bold text-[#1A1412]">
+                        ₹{balanceDueRupees.toLocaleString("en-IN")}
                       </span>
                     </div>
-                  </div>
-
-                  <div className="mt-2.5 pt-2 border-t border-[#e8dfd5] flex items-start gap-1.5 text-[11px] text-[#786a5e] leading-snug">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#e07a28" strokeWidth="2" className="shrink-0 mt-0.5">
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="12" y1="16" x2="12" y2="12" />
-                      <line x1="12" y1="8" x2="12.01" y2="8" />
-                    </svg>
-                    <span>
-                      Because each lithophane is custom 3D printed with your personal photo, a ₹570 advance is required to start manufacturing. You can pay the balance to the delivery agent via Cash or any UPI app.
-                    </span>
-                  </div>
+                  )}
                 </div>
-              ) : (
-                <div className="bg-[#f2f8f4] border border-[#cbe4d2] rounded-xl p-3 sm:p-3.5 font-sans">
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-[#1e7234] mb-2 pb-1.5 border-b border-[#cbe4d2] flex items-center justify-between">
-                    <span>Full Payment Summary</span>
-                    <span className="text-[10px] text-[#1e7234] font-bold bg-[#e0f3e4] px-2 py-0.5 rounded border border-[#bfe5c6]">
-                      Save ₹70
-                    </span>
-                  </div>
 
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex justify-between items-center text-[#2e6e3c]">
-                      <span>Order total</span>
-                      <span className="font-bold text-[#2e1e12]">₹{finalTotal.toLocaleString("en-IN")}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-[#2e6e3c]">
-                      <span>Courier and COD handling</span>
-                      <span className="font-bold text-[#1e7234]">FREE</span>
-                    </div>
-                    <div className="flex justify-between items-center pt-2 border-t border-[#cbe4d2] font-bold">
-                      <span className="text-[#2e1e12]">Total payable online</span>
-                      <span className="text-[#1e7234] text-sm">₹{finalTotal.toLocaleString("en-IN")}</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-2.5 pt-2 border-t border-[#cbe4d2] flex items-center gap-1.5 text-[11px] text-[#2e6e3c] leading-snug">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1e7234" strokeWidth="2.5" className="shrink-0">
-                      <polyline points="20 6 9 17 4 12" />
+                <div className="mt-3.5 pt-3 border-t border-[#EAE4DC] flex items-center justify-between text-[11px] text-[#786F66]">
+                  <div className="flex items-center gap-1.5">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#047857" strokeWidth="2.2" className="shrink-0">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                     </svg>
-                    <span>
-                      Pay via Google Pay, PhonePe, Paytm, Cards, or Net Banking on the next screen.
-                    </span>
+                    <span>256-Bit SSL Encrypted Checkout via Razorpay</span>
                   </div>
+                  <span className="text-[#047857] font-semibold hidden sm:inline">100% Replacement Guarantee</span>
                 </div>
-              )}
-
-              {/* Security note */}
-              <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-[#786a5e] font-sans">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1e7234" strokeWidth="2" className="shrink-0">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                </svg>
-                <span className="truncate">256-bit encrypted checkout handled securely by Razorpay.</span>
               </div>
             </div>
           </div>
@@ -2077,6 +2113,87 @@ function CheckoutContent() {
           setPromoError("");
         }}
       />
+
+      {/* ── Payment Recovery Modal ──────────────────────────── */}
+      {paymentRecoveryModal?.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-[#FAF8F5] border border-[#EAE4DC] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center animate-scaleUp">
+            <div className="w-14 h-14 bg-[#FFF7ED] border border-[#FED7AA] text-[#D47124] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xs">
+              <svg
+                width="26"
+                height="26"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
+
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#D47124] block mb-1">
+              Transaction Interrupted
+            </span>
+            <h3 className="text-xl font-serif font-bold text-[#1A1412] mb-2">
+              {paymentRecoveryModal.title}
+            </h3>
+            <p className="text-xs sm:text-sm text-[#5C534E] leading-relaxed mb-4">
+              {paymentRecoveryModal.message}
+            </p>
+
+            <div className="bg-white border border-[#EAE4DC] rounded-2xl p-4 text-left mb-6 text-xs text-[#5C534E] space-y-2">
+              <div className="flex items-center gap-2 text-[#047857] font-semibold">
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor">
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span>Your customized lamp & photo are safe</span>
+              </div>
+              <div className="flex items-center gap-2 text-[#047857] font-semibold">
+                <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor">
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span>Coupon discount was not consumed</span>
+              </div>
+              <p className="text-[11px] text-[#786F66] pt-1.5 border-t border-[#F0EAE1] leading-normal">
+                If money was deducted by your bank, it will be automatically refunded to your account within 24–48 hours.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setPaymentRecoveryModal(null);
+                  setErrorMessage("");
+                }}
+                className="w-full bg-[#D47124] hover:bg-[#BA5D17] text-white text-xs font-bold uppercase tracking-wider py-3.5 rounded-xl transition-all shadow-sm active:scale-[0.98] cursor-pointer"
+              >
+                Try Again with UPI, Card, or COD
+              </button>
+              <a
+                href="https://wa.me/919933887019?text=Hi%20ICR%2C%20I%20had%20an%20issue%20during%20checkout%20for%20my%20personalized%20lithophane%20lamp."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full bg-white hover:bg-[#FAF8F5] border border-[#EAE4DC] text-[#1A1412] text-xs font-bold uppercase tracking-wider py-3.5 rounded-xl transition-colors inline-flex items-center justify-center gap-2"
+              >
+                <span>Chat with Artisan WhatsApp Concierge</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
