@@ -46,6 +46,7 @@ export default function AboutUsPage() {
                 sizes="96px"
                 className="object-contain object-center"
                 priority
+                loading="eager"
               />
             </Link>
           </div>

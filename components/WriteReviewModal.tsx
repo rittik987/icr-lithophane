@@ -223,11 +223,13 @@ export default function WriteReviewModal({
               {/* Render uploaded thumbnails with remove button */}
               {uploadedPhotos.map((photoUrl, idx) => (
                 <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden border border-[#e5ddd0] shadow-xs group">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={photoUrl}
                     alt={`Customer uploaded ${idx + 1}`}
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="80px"
+                    className="object-cover"
+                    unoptimized={photoUrl.startsWith("data:") || photoUrl.startsWith("blob:")}
                   />
                   <button
                     type="button"

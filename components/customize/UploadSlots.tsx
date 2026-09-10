@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
+import Image from "next/image";
 import { TemplateConfig, PhotoSlot } from "@/lib/templates";
 import CropperModal from "./CropperModal";
 
@@ -98,7 +99,7 @@ function UploadBox({ slot, file, onUpload, onRemove }: UploadBoxProps) {
 
   return (
     <>
-      <div className="bg-white border border-[#e5ddd0] rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-white border border-[#e5ddd0] rounded-sm overflow-hidden shadow-sm">
         {/* Slot header */}
         <div className="flex items-center justify-between px-4 pt-3.5 pb-2">
           <div className="flex items-center gap-2">
@@ -114,18 +115,20 @@ function UploadBox({ slot, file, onUpload, onRemove }: UploadBoxProps) {
         {file && previewUrl ? (
           /* ── Uploaded: show preview thumbnail ── */
           <div
-            className="relative mx-4 mb-4 rounded-xl overflow-hidden bg-[#f2ebdc]"
+            className="relative mx-4 mb-4 rounded-sm overflow-hidden bg-[#f2ebdc]"
             style={{ aspectRatio: `${slot.w} / ${slot.h}` }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={previewUrl}
               alt="Uploaded preview"
-              className="w-full h-full object-cover"
+              fill
+              sizes="(max-width: 640px) 100vw, 450px"
+              className="object-cover"
+              unoptimized
             />
 
             {/* ✓ badge */}
-            <div className="absolute top-2 left-2 flex items-center gap-1 bg-[#1e7234] rounded-full px-2 py-1 shadow-sm">
+            <div className="absolute top-2 left-2 flex items-center gap-1 bg-[#1e7234] rounded-sm px-2 py-0.5 shadow-sm">
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
                 <path d="M2 5l2.5 2.5 3.5-3.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -133,20 +136,27 @@ function UploadBox({ slot, file, onUpload, onRemove }: UploadBoxProps) {
             </div>
 
             {/* Change / Remove buttons */}
-            <div className="absolute bottom-2 right-2 flex gap-2">
+            <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
               <button
+                type="button"
                 onClick={() => inputRef.current?.click()}
-                style={{ color: "#2e1e12" }}
-                className="bg-white/90 backdrop-blur-sm border border-white/60 rounded-full px-3 py-1.5 text-[11px] font-semibold font-sans shadow-sm hover:bg-white transition-colors"
+                className="bg-white/95 hover:bg-white backdrop-blur-sm border border-[#e5ddd0] hover:border-[#d47124] rounded-sm px-2 py-1 text-[11px] font-medium font-sans text-[#2e1e12] shadow-2xs flex items-center gap-1 transition-all cursor-pointer active:scale-95"
               >
-                Change
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+                <span>Change</span>
               </button>
               <button
+                type="button"
                 onClick={onRemove}
-                style={{ color: "#c0392b" }}
-                className="bg-white/90 backdrop-blur-sm border border-white/60 rounded-full px-3 py-1.5 text-[11px] font-semibold font-sans shadow-sm hover:bg-white transition-colors"
+                className="bg-white/95 hover:bg-white backdrop-blur-sm border border-[#e5ddd0] hover:border-[#c0392b] rounded-sm px-2 py-1 text-[11px] font-medium font-sans text-[#c0392b] shadow-2xs flex items-center gap-1 transition-all cursor-pointer active:scale-95"
               >
-                Remove
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+                <span>Remove</span>
               </button>
             </div>
           </div>
@@ -161,7 +171,7 @@ function UploadBox({ slot, file, onUpload, onRemove }: UploadBoxProps) {
             onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFiles(e.dataTransfer.files); }}
-            className={`mx-4 mb-4 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-3 py-8 cursor-pointer transition-colors ${
+            className={`mx-4 mb-4 rounded-sm border-2 border-dashed flex flex-col items-center justify-center gap-3 py-8 cursor-pointer transition-colors ${
               isDragging
                 ? "border-[#e07a28] bg-[#fdf3e8]"
                 : "border-[rgba(224,122,40,0.4)] bg-[#faf7f2] hover:border-[#e07a28] hover:bg-[#fdf3e8]"

@@ -10,7 +10,7 @@ interface TextFieldsProps {
 
 export default function TextFields({ fields, values, onChange }: TextFieldsProps) {
   return (
-    <div className="bg-white border border-[#e5ddd0] rounded-2xl p-4 shadow-sm flex flex-col gap-4">
+    <div className="bg-white border border-[#e5ddd0] rounded-sm p-4 shadow-sm flex flex-col gap-4">
       {/* Section header */}
       <p className="text-[#2e1e12] text-[16px] font-semibold font-sans">
         Personalise
@@ -36,7 +36,7 @@ export default function TextFields({ fields, values, onChange }: TextFieldsProps
                 value={value}
                 maxLength={field.maxLength}
                 onChange={(e) => onChange(field.id, e.target.value)}
-                className="w-full bg-[#faf7f2] border border-[#e5ddd0] rounded-xl px-3.5 py-3 text-[#2e1e12] text-[14px] font-sans placeholder:text-[#c9b99f] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[rgba(224,122,40,0.15)] transition-all"
+                className="w-full bg-[#faf7f2] border border-[#e5ddd0] rounded-sm px-3.5 py-3 text-[#2e1e12] text-[14px] font-sans placeholder:text-[#c9b99f] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[rgba(224,122,40,0.15)] transition-all"
                 placeholder={field.defaultValue}
               />
             </div>

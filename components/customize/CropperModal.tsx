@@ -57,7 +57,7 @@ export default function CropperModal({
         <button
           type="button"
           onClick={onCancel}
-          className="text-[#6e5c50] hover:text-[#2e1e12] text-sm font-medium py-1.5 px-3 rounded-xl hover:bg-[#f2ebdc] transition-colors"
+          className="text-[#6e5c50] hover:text-[#2e1e12] text-sm font-medium py-1.5 px-3 rounded-sm hover:bg-[#f2ebdc] transition-colors"
         >
           Cancel
         </button>
@@ -66,7 +66,7 @@ export default function CropperModal({
           <p className="text-[#2e1e12] text-sm sm:text-base font-bold leading-tight">
             Crop Photo
           </p>
-          <p className="text-[#e07a28] text-[11px] font-bold uppercase tracking-wider">
+          <p className="text-[#e07a28] text-[12px] font-semibold">
             {slotLabel}
           </p>
         </div>
@@ -75,7 +75,7 @@ export default function CropperModal({
           type="button"
           onClick={handleConfirm}
           disabled={isProcessing || !croppedAreaPixels}
-          className="text-xs uppercase tracking-wider font-bold py-2 px-5 rounded-xl transition-all shadow-xs active:scale-[0.98] disabled:opacity-50"
+          className="text-xs font-semibold py-2 px-5 rounded-sm transition-all shadow-xs active:scale-[0.98] disabled:opacity-50 cursor-pointer"
           style={{
             backgroundColor: "#e07a28",
             color: "#ffffff",
@@ -109,7 +109,7 @@ export default function CropperModal({
       {/* Bottom Zoom & Adjustment Controls */}
       <div className="shrink-0 bg-[#faf7f2] border-t border-[#e5ddd0] px-6 pt-4 pb-8 flex flex-col items-center gap-3 shadow-xs">
         <div className="flex items-center justify-between w-full max-w-xs text-xs">
-          <span className="text-[#6e5c50] font-bold uppercase tracking-wider text-[11px]">
+          <span className="text-[#6e5c50] font-semibold text-[12px]">
             Zoom Photo
           </span>
           <span className="font-bold text-[#e07a28] bg-[#fdf3e7] border border-[#f3d3b0] px-2 py-0.5 rounded-full text-[11px]">
@@ -122,7 +122,7 @@ export default function CropperModal({
             type="button"
             onClick={() => setZoom((z) => Math.max(1, z - 0.2))}
             aria-label="Zoom out"
-            className="w-8 h-8 rounded-xl bg-[#f2ebdc] border border-[#e5ddd0] text-[#5a3a1a] hover:bg-[#e8ded0] flex items-center justify-center font-bold text-base shrink-0 transition-colors shadow-2xs"
+            className="w-8 h-8 rounded-sm bg-[#f2ebdc] border border-[#e5ddd0] text-[#5a3a1a] hover:bg-[#e8ded0] flex items-center justify-center font-bold text-base shrink-0 transition-colors shadow-2xs"
           >
             −
           </button>
@@ -140,7 +140,7 @@ export default function CropperModal({
             type="button"
             onClick={() => setZoom((z) => Math.min(3, z + 0.2))}
             aria-label="Zoom in"
-            className="w-8 h-8 rounded-xl bg-[#f2ebdc] border border-[#e5ddd0] text-[#5a3a1a] hover:bg-[#e8ded0] flex items-center justify-center font-bold text-base shrink-0 transition-colors shadow-2xs"
+            className="w-8 h-8 rounded-sm bg-[#f2ebdc] border border-[#e5ddd0] text-[#5a3a1a] hover:bg-[#e8ded0] flex items-center justify-center font-bold text-base shrink-0 transition-colors shadow-2xs"
           >
             +
           </button>

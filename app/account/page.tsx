@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import useSWR from "swr";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -24,9 +25,18 @@ export default function AccountPage() {
   const [editName, setEditName] = useState("");
   const [savingName, setSavingName] = useState(false);
 
-  // Address State
-  const [addresses, setAddresses] = useState<Address[]>([]);
-  const [loadingAddresses, setLoadingAddresses] = useState(false);
+  // Address State — SWR for automatic cache across route transitions
+  const { data: addresses = [], isLoading: loadingAddresses, mutate: mutateAddresses } = useSWR(
+    user ? "user-addresses" : null,
+    async () => {
+      const res = await userApi.getAddresses();
+      if (res.success && res.data?.addresses) {
+        return res.data.addresses;
+      }
+      return [];
+    },
+    { revalidateOnFocus: false, dedupingInterval: 3000 }
+  );
   const [showAddAddressModal, setShowAddAddressModal] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
   // Inline delete confirmation per address id — avoids window.confirm()
@@ -49,39 +59,13 @@ export default function AccountPage() {
   }, [isLoading, user, router]);
 
   // Handle pull-to-refresh
-  const [isPullRefreshing, setIsPullRefreshing] = useState(false);
   useEffect(() => {
     function handlePullRefresh() {
-      setIsPullRefreshing(true);
-      if (user) {
-        userApi.getAddresses().then((res) => {
-          if (res.success && res.data?.addresses) {
-            setAddresses(res.data.addresses);
-          }
-        });
-      }
-      setTimeout(() => {
-        setIsPullRefreshing(false);
-      }, 700);
+      mutateAddresses();
     }
     window.addEventListener("app:pulled-to-refresh", handlePullRefresh);
     return () => window.removeEventListener("app:pulled-to-refresh", handlePullRefresh);
-  }, [user]);
-
-  // Load addresses
-  useEffect(() => {
-    if (user) {
-      setLoadingAddresses(true);
-      userApi
-        .getAddresses()
-        .then((res) => {
-          if (res.success && res.data?.addresses) {
-            setAddresses(res.data.addresses);
-          }
-        })
-        .finally(() => setLoadingAddresses(false));
-    }
-  }, [user]);
+  }, [mutateAddresses]);
 
   // Initialize edit name when user loads
   useEffect(() => {
@@ -134,11 +118,8 @@ export default function AccountPage() {
       if (res.success && res.data?.address) {
         showToast({ title: "Delivery address added", type: "success" });
         setShowAddAddressModal(false);
-        // refresh address list
-        const refreshed = await userApi.getAddresses();
-        if (refreshed.success && refreshed.data?.addresses) {
-          setAddresses(refreshed.data.addresses);
-        }
+        // refresh address list via SWR cache
+        mutateAddresses();
         setNewAddress({
           label: "Home",
           line1: "",
@@ -159,7 +140,11 @@ export default function AccountPage() {
   async function handleDeleteAddress(id: string) {
     const res = await userApi.deleteAddress(id);
     if (res.success) {
-      setAddresses((prev) => prev.filter((a) => a.id !== id));
+      // Optimistically update the SWR cache by filtering out the deleted address
+      mutateAddresses(
+        (prev) => (prev ? prev.filter((a) => a.id !== id) : []),
+        { revalidate: false }
+      );
       setConfirmDeleteId(null);
       showToast({ title: "Address removed", type: "info" });
     } else {
@@ -167,7 +152,7 @@ export default function AccountPage() {
     }
   }
 
-  if (isLoading || !user || isPullRefreshing) {
+  if (isLoading || !user) {
     return (
       <div className="min-h-screen bg-[#faf7f2] flex flex-col">
         <header className="fixed top-0 left-0 right-0 z-40 h-14 sm:h-16 backdrop-blur-md bg-[rgba(250,247,242,0.96)] border-b border-[#e5ddd0]" />
@@ -238,6 +223,7 @@ export default function AccountPage() {
                 sizes="96px"
                 className="object-contain object-center"
                 priority
+                loading="eager"
               />
             </Link>
           </div>

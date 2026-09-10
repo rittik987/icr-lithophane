@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect } from "react";
+import useSWR from "swr";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ASSETS } from "@/lib/assets";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/lib/cart";
-import { orderApi, ServerOrder } from "@/lib/api";
+import { orderApi } from "@/lib/api";
 import { OrderCardSkeleton } from "@/components/Skeleton";
 
 function formatRupees(paise: number = 0): string {
@@ -55,9 +56,25 @@ export default function OrdersListPage() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const { totalCount } = useCart();
 
-  const [orders, setOrders] = useState<ServerOrder[]>([]);
-  const [isLoadingOrders, setIsLoadingOrders] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
+  // SWR: fetch orders with automatic cache across route transitions.
+  // `isLoading` is true ONLY on the very first mount when no cache exists.
+  // On back-navigation, SWR returns cached data instantly (0 skeleton).
+  const { data: orders = [], error: orderError, isLoading: isLoadingOrders, mutate } = useSWR(
+    user ? "user-orders" : null,
+    async () => {
+      const res = await orderApi.getOrders();
+      if (res.success && res.data?.orders) {
+        const validOrders = res.data.orders.filter((o) => o.status !== "CANCELLED");
+        return [...validOrders].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      }
+      throw new Error(res.error || "Unable to retrieve orders at this time.");
+    },
+    { revalidateOnFocus: true, dedupingInterval: 3000 }
+  );
+
+  const errorMessage = orderError?.message || "";
 
   // Guard: Redirect to login if unauthenticated
   useEffect(() => {
@@ -66,45 +83,14 @@ export default function OrdersListPage() {
     }
   }, [isAuthLoading, user, router]);
 
-  // Fetch user orders list
-  const fetchOrders = useCallback(() => {
-    if (!user) return;
-    setIsLoadingOrders(true);
-    setErrorMessage("");
-
-    orderApi
-      .getOrders()
-      .then((res) => {
-        if (res.success && res.data?.orders) {
-          const validOrders = res.data.orders.filter((o) => o.status !== "CANCELLED");
-          const sorted = [...validOrders].sort((a, b) => {
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-          });
-          setOrders(sorted);
-        } else {
-          setErrorMessage(res.error || "Unable to retrieve orders at this time.");
-        }
-      })
-      .catch((err) => {
-        setErrorMessage("Network error while retrieving orders. Please check your connection.");
-      })
-      .finally(() => {
-        setIsLoadingOrders(false);
-      });
-  }, [user]);
-
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
-
   // Handle pull-to-refresh
   useEffect(() => {
     function handlePullRefresh() {
-      fetchOrders();
+      mutate();
     }
     window.addEventListener("app:pulled-to-refresh", handlePullRefresh);
     return () => window.removeEventListener("app:pulled-to-refresh", handlePullRefresh);
-  }, [fetchOrders]);
+  }, [mutate]);
 
   if (isAuthLoading || !user) {
     return (
@@ -149,6 +135,7 @@ export default function OrdersListPage() {
                 sizes="96px"
                 className="object-contain object-center"
                 priority
+                loading="eager"
               />
             </Link>
           </div>
@@ -212,7 +199,7 @@ export default function OrdersListPage() {
         )}
 
         {/* Orders loading skeleton */}
-        {isLoadingOrders || isAuthLoading ? (
+        {isLoadingOrders ? (
           <div className="flex flex-col gap-5">
             <OrderCardSkeleton />
             <OrderCardSkeleton />
@@ -278,12 +265,16 @@ export default function OrdersListPage() {
                     <div className="flex items-center gap-3.5 min-w-0">
                       <div className="relative shrink-0">
                         {firstItem?.previewUrl ? (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img
-                            src={firstItem.previewUrl}
-                            alt={firstItem.templateName || "Keepsake"}
-                            className="w-16 h-16 sm:w-[72px] sm:h-[72px] object-cover rounded-xl border border-[#e5ddd0] shadow-xs"
-                          />
+                          <div className="relative w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-xl overflow-hidden border border-[#e5ddd0] shadow-xs">
+                            <Image
+                              src={firstItem.previewUrl}
+                              alt={firstItem.templateName || "Keepsake"}
+                              fill
+                              sizes="72px"
+                              className="object-cover"
+                              unoptimized={firstItem.previewUrl.startsWith("data:") || firstItem.previewUrl.startsWith("blob:")}
+                            />
+                          </div>
                         ) : (
                           <div className="w-16 h-16 sm:w-[72px] sm:h-[72px] rounded-xl bg-[#f2ebdc] border border-[#e5ddd0] flex items-center justify-center text-[11px] font-semibold text-[#6e5c50]">
                             Lamp

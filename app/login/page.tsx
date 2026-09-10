@@ -82,14 +82,15 @@ function LoginForm() {
           message: "Signed in successfully",
           type: "success",
         });
-        // Hard replace wipes /login from history so Back never returns to login, and bypasses router cache
+        // Keep loading true so button displays spinner while navigating to root /
         window.location.replace(redirect);
+        return;
       } else {
         setError(res.error || "Invalid mobile number or password");
+        setLoading(false);
       }
     } catch {
       setError("Unable to connect to server. Please try again.");
-    } finally {
       setLoading(false);
     }
   }
@@ -100,14 +101,6 @@ function LoginForm() {
       message: "Configure GOOGLE_CLIENT_ID in backend .env to enable instant Google Sign-In",
       type: "info",
     });
-  }
-
-  if (user) {
-    return (
-      <div className="min-h-screen bg-[#FAF7F2] flex items-center justify-center p-4">
-        <div className="w-8 h-8 border-2 border-[#E07A28] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
   }
 
   return (

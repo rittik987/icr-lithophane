@@ -28,7 +28,7 @@ export default function CustomizeHeader() {
         <button
           aria-label="Go back"
           onClick={handleBack}
-          className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-[#f2ebdc] transition-colors cursor-pointer"
+          className="w-9 h-9 flex items-center justify-center rounded-sm hover:bg-[#f2ebdc] transition-colors cursor-pointer"
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
             <path

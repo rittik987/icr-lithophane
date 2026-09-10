@@ -121,11 +121,13 @@ export default function ReviewsSection() {
                 className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden border border-[#e5ddd0] bg-white shrink-0 cursor-zoom-in group shadow-xs hover:shadow-md transition-all"
                 title={`Photo by ${photo.reviewer}`}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={photo.src}
                   alt={`Customer lithophane photo by ${photo.reviewer}`}
+                  fill
+                  sizes="(max-width: 640px) 96px, 112px"
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  unoptimized={photo.src.startsWith("data:") || photo.src.startsWith("blob:")}
                 />
                 <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-sans font-semibold">
                   View
@@ -230,11 +232,13 @@ export default function ReviewsSection() {
                       }
                       className="relative w-16 h-16 rounded-lg overflow-hidden border border-[#e5ddd0] bg-[#faf7f2] cursor-zoom-in group shadow-2xs hover:shadow-xs transition-all"
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <Image
                         src={imgUrl}
                         alt={`Customer photo by ${review.name}`}
+                        fill
+                        sizes="64px"
                         className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                        unoptimized={imgUrl.startsWith("data:") || imgUrl.startsWith("blob:")}
                       />
                     </div>
                   ))}
@@ -289,11 +293,13 @@ export default function ReviewsSection() {
             </div>
 
             <div className="p-4 bg-black/5 flex items-center justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={lightboxImage.src}
                 alt={`Photo by ${lightboxImage.reviewer}`}
+                width={700}
+                height={700}
                 className="max-h-[60vh] w-auto object-contain rounded-lg border border-[#e5ddd0] shadow-md"
+                unoptimized={lightboxImage.src.startsWith("data:") || lightboxImage.src.startsWith("blob:")}
               />
             </div>
           </div>
