@@ -57,7 +57,12 @@ export default function CapacitorInit() {
             pathname === "/login" ||
             pathname === "/register" ||
             pathname === "/contact" ||
-            pathname === "/privacy-policy"
+            pathname === "/privacy-policy" ||
+            pathname === "/about" ||
+            pathname === "/pricing-policy" ||
+            pathname === "/terms-and-conditions" ||
+            pathname === "/cancellation-refund-policy" ||
+            pathname === "/shipping-policy"
           ) {
             // Top-level subpages: back to home
             router.replace("/");

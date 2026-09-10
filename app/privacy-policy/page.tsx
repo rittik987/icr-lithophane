@@ -111,7 +111,8 @@ export default function PrivacyPolicyPage() {
             </p>
             <div className="bg-[#faf7f2] p-4 rounded-xl border border-[#e5ddd0] text-xs">
               <p className="font-semibold text-[#2e1e12]">ICR Custom Creations Support</p>
-              <p className="text-[#6e5c50]">Email: hello@icrcustomcreations.com</p>
+              <p className="text-[#6e5c50]">Bannerghatta Road, Bangalore, Karnataka, 560068</p>
+              <p className="text-[#6e5c50] mt-0.5">Email: hello@icrcustomcreations.in</p>
               <p className="text-[#6e5c50]">Response time: Within 24 business hours</p>
             </div>
           </section>

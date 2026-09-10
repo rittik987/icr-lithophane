@@ -520,7 +520,7 @@ export default function AccountPage() {
           </div>
           <div className="grid grid-cols-2 gap-2.5">
             <a
-              href="https://wa.me/919876543210?text=Hello%20ICR%20Custom%20Creations%2C%20I%20have%20an%20inquiry%20regarding%20my%20account."
+              href="https://wa.me/919035765038?text=Hello%20ICR%20Custom%20Creations%2C%20I%20have%20an%20inquiry%20regarding%20my%20account."
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-white border border-[#e8dfd2] hover:border-[#25D366] text-xs font-semibold text-[#2e1e12] transition-all shadow-2xs"
@@ -529,7 +529,7 @@ export default function AccountPage() {
               <span>WhatsApp</span>
             </a>
             <a
-              href="mailto:hello@icrcustomcreations.com"
+              href="mailto:hello@icrcustomcreations.in"
               className="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-white border border-[#e8dfd2] hover:border-[#c96a1f] text-xs font-semibold text-[#2e1e12] transition-all shadow-2xs"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#8c786a]">
