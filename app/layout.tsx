@@ -23,6 +23,14 @@ export const metadata: Metadata = {
       "Heirloom-quality 3D-carved photo lamps in solid walnut. Free pan-India delivery.",
     type: "website",
   },
+  icons: {
+    icon: [
+      { url: "/icon.png", type: "image/png" },
+      { url: "/logo.png", type: "image/png" },
+    ],
+    shortcut: "/logo.png",
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({

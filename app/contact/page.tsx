@@ -202,8 +202,8 @@ export default function ContactUsPage() {
               <span className="text-[10px] uppercase font-bold tracking-wider text-[#e07a28]">Direct Support</span>
               <h3 className="text-base font-serif font-bold text-[#2e1e12]">Email Us</h3>
               <p className="text-xs text-[#6e5c50]">For order support, photo design queries, and general questions:</p>
-              <a href="mailto:hello@icrcustomcreations.com" className="text-xs font-bold text-[#2e1e12] hover:text-[#e07a28] transition-colors mt-1">
-                hello@icrcustomcreations.com
+              <a href="mailto:hello@icrcustomcreations.in" className="text-xs font-bold text-[#2e1e12] hover:text-[#e07a28] transition-colors mt-1">
+                hello@icrcustomcreations.in
               </a>
             </div>
 
@@ -212,7 +212,7 @@ export default function ContactUsPage() {
               <h3 className="text-base font-serif font-bold text-[#2e1e12]">WhatsApp Helpdesk</h3>
               <p className="text-xs text-[#6e5c50]">Mon - Sat from 10:00 AM to 7:00 PM IST:</p>
               <span className="text-xs font-bold text-[#2e1e12]">
-                +91 98765 43210
+                +91 9035765038
               </span>
             </div>
 
@@ -221,8 +221,8 @@ export default function ContactUsPage() {
               <h3 className="text-base font-serif font-bold text-[#2e1e12]">Workshop &amp; Fulfillment</h3>
               <p className="text-xs text-[#6e5c50] leading-relaxed">
                 ICR Custom Creations Studio<br />
-                Okhla Industrial Area, Phase-III<br />
-                New Delhi, India 110020
+                Bannerghatta Road<br />
+                Bangalore, Karnataka, 560068
               </p>
             </div>
           </div>
