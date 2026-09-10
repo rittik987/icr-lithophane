@@ -609,6 +609,14 @@ export const orderApi = {
     });
   },
 
+  /** Cancel an unconfirmed draft order attempt. */
+  async cancelOrder(id: string, reason?: string) {
+    return apiRequest<{ success: boolean }>(`/orders/${id}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    });
+  },
+
   async getOrders() {
     return apiRequest<{ orders: ServerOrder[] }>("/orders");
   },

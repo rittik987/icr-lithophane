@@ -10,9 +10,12 @@ import { useCart } from "@/lib/cart";
 import { orderApi, ServerOrder } from "@/lib/api";
 import { OrderDetailSkeleton } from "@/components/Skeleton";
 
-function formatRupees(paiseOrRupees: number): string {
-  const rupees = paiseOrRupees > 50000 ? Math.round(paiseOrRupees / 100) : paiseOrRupees;
-  return `₹${rupees.toLocaleString("en-IN")}`;
+function formatRupees(paise: number = 0): string {
+  const rupees = (paise || 0) / 100;
+  return `₹${rupees.toLocaleString("en-IN", {
+    minimumFractionDigits: Number.isInteger(rupees) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 function formatDate(isoString: string): string {
@@ -533,14 +536,14 @@ export default function OrderDetailsPage() {
                         <div className="flex sm:justify-end gap-2 text-[#5C534E]">
                           <span>Courier Handling (COD):</span>
                           <span className="font-semibold text-[#1A1412]">
-                            {formatRupees(order.shippingCharge || 7000)}
+                            {formatRupees(order.shippingCharge ?? 7000)}
                           </span>
                         </div>
                         <div className="flex sm:justify-end gap-2 text-[#047857]">
                           <span>Advance Paid Online:</span>
                           <span className="font-semibold">
                             {formatRupees(
-                              (order.advanceAmount || 50000) + (order.shippingCharge || 7000)
+                              (order.advanceAmount ?? 50000) + (order.shippingCharge ?? 7000)
                             )}
                           </span>
                         </div>
