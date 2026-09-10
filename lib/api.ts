@@ -62,6 +62,7 @@ export function clearStoredAuth(): void {
   localStorage.removeItem("icr_refresh_token");
   localStorage.removeItem("icr_user");
   document.cookie = "icr_auth=; path=/; max-age=0; SameSite=Lax";
+  document.cookie = "icr_auth=; path=/; max-age=0; SameSite=Lax; domain=.icrcustomcreations.in";
 }
 
 export function handleUnauthorized(): void {

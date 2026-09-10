@@ -28,8 +28,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function setAuthCookie() {
   if (typeof document !== "undefined") {
-    // 30-day presence cookie for the Next.js middleware route guard (proxy.ts)
-    document.cookie = "icr_auth=1; path=/; max-age=2592000; SameSite=Lax";
+    const isHttps = window.location.protocol === "https:";
+    const host = window.location.hostname;
+    const domainPart = host.includes("icrcustomcreations.in")
+      ? "; domain=.icrcustomcreations.in"
+      : "";
+    const securePart = isHttps ? "; Secure" : "";
+    document.cookie = `icr_auth=1; path=/; max-age=2592000; SameSite=Lax${securePart}${domainPart}`;
+    // Also set host-only fallback in case domain attribute is ignored by browser
+    if (domainPart) {
+      document.cookie = `icr_auth=1; path=/; max-age=2592000; SameSite=Lax${securePart}`;
+    }
   }
 }
 

@@ -17,13 +17,19 @@ export function proxy(request: NextRequest) {
     if (!authCookie) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
-      return NextResponse.redirect(loginUrl);
+      const res = NextResponse.redirect(loginUrl);
+      res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+      return res;
     }
   }
 
-  // Redirect away from login/register if already authenticated
+  // Redirect away from login/register if already authenticated (always default to root /)
   if ((pathname === "/login" || pathname === "/register") && authCookie) {
-    return NextResponse.redirect(new URL("/account", request.url));
+    const rawRedirect = request.nextUrl.searchParams.get("redirect") || "/";
+    const targetPath = rawRedirect.startsWith("/login") || rawRedirect.startsWith("/register") ? "/" : rawRedirect;
+    const res = NextResponse.redirect(new URL(targetPath, request.url));
+    res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    return res;
   }
 
   return NextResponse.next();

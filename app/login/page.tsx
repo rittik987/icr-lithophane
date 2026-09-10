@@ -32,7 +32,7 @@ function GoogleIcon({ className = "w-4 h-4" }: { className?: string }) {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") || "/account";
+  const redirect = searchParams.get("redirect") || "/";
 
   const { user, isLoading, login } = useAuth();
   const { showToast } = useToast();
@@ -46,9 +46,9 @@ function LoginForm() {
   // Auth guard: if already logged in, navigate away immediately (no coming back to login)
   useEffect(() => {
     if (!isLoading && user) {
-      router.replace(redirect);
+      window.location.replace(redirect);
     }
-  }, [isLoading, user, redirect, router]);
+  }, [isLoading, user, redirect]);
 
   function handlePhoneChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.value.replace(/\D/g, "");
@@ -82,8 +82,8 @@ function LoginForm() {
           message: "Signed in successfully",
           type: "success",
         });
-        // Use replace so login is removed from browser history stack
-        router.replace(redirect);
+        // Hard replace wipes /login from history so Back never returns to login, and bypasses router cache
+        window.location.replace(redirect);
       } else {
         setError(res.error || "Invalid mobile number or password");
       }
@@ -275,7 +275,7 @@ function LoginForm() {
             <p className="text-xs text-[#7A6759]">
               Don&apos;t have an account?{" "}
               <Link
-                href={`/register${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ""}`}
+                href={`/register${redirect && redirect !== "/" ? `?redirect=${encodeURIComponent(redirect)}` : ""}`}
                 className="font-bold text-[#D96B27] hover:text-[#B85315] hover:underline ml-1"
               >
                 Create an account
