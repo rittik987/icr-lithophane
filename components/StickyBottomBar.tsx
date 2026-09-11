@@ -17,19 +17,9 @@ export default function StickyBottomBar({ product }: StickyBottomBarProps) {
   const sellingPrice =
     product?.sellingPrice !== undefined
       ? Math.round(product.sellingPrice / 100)
-      : 2999;
+      : null;
   const mrp =
-    product?.mrp !== undefined ? Math.round(product.mrp / 100) : 4999;
-
-  const discountPercent =
-    mrp > sellingPrice && mrp > 0
-      ? Math.round(((mrp - sellingPrice) / mrp) * 100)
-      : 0;
-
-  const discountText =
-    discountPercent > 0
-      ? `${discountPercent}% OFF • FREE DELIVERY`
-      : "FREE PAN-INDIA DELIVERY";
+    product?.mrp !== undefined ? Math.round(product.mrp / 100) : null;
 
   function handleOrderClick() {
     if (!user) {
@@ -46,24 +36,23 @@ export default function StickyBottomBar({ product }: StickyBottomBarProps) {
       style={{ paddingBottom: "calc(14px + env(safe-area-inset-bottom, 0px))" }}
     >
       <div className="flex items-center justify-between gap-4 max-w-md mx-auto">
-        {/* Price info */}
-        <div className="flex flex-col gap-1">
+        {/* Price */}
+        <div className="flex flex-col gap-0.5">
           <div className="flex items-baseline gap-2 leading-none">
-            <span className="text-[#2e1e12] text-xl font-bold leading-none font-sans">
-              ₹{sellingPrice.toLocaleString("en-IN")}
-            </span>
-            {mrp > 0 && (
+            {sellingPrice !== null && (
+              <span className="text-[#2e1e12] text-xl font-bold leading-none font-sans">
+                ₹{sellingPrice.toLocaleString("en-IN")}
+              </span>
+            )}
+            {mrp !== null && sellingPrice !== null && mrp > sellingPrice && (
               <span className="text-[#6e5c50] text-xs line-through font-sans">
                 ₹{mrp.toLocaleString("en-IN")}
               </span>
             )}
           </div>
-          <span className="text-[#1e7234] text-[10px] font-semibold tracking-wide uppercase font-sans">
-            {discountText}
-          </span>
         </div>
 
-        {/* CTA — guarded with button click */}
+        {/* CTA */}
         <button
           type="button"
           onClick={handleOrderClick}

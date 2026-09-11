@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { ASSETS } from "@/lib/assets";
 import { useAuth } from "@/context/AuthContext";
 import { StorefrontProduct } from "@/lib/api";
+import RazorpayAffordabilityWidget from "@/components/RazorpayAffordabilityWidget";
+
+const RAZORPAY_KEY = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? "";
 
 interface PriceBlockProps {
   product?: StorefrontProduct | null;
@@ -65,7 +68,7 @@ export default function PriceBlock({ product }: PriceBlockProps) {
             )}
           </div>
           <p className="text-[#6e5c50] text-[11px] font-medium mt-1 font-sans">
-            All taxes &amp; pan-India courier included
+            All taxes included
           </p>
         </div>
 
@@ -78,6 +81,14 @@ export default function PriceBlock({ product }: PriceBlockProps) {
           </div>
         )}
       </div>
+
+      {/* Razorpay EMI² Affordability Widget */}
+      {RAZORPAY_KEY ? (
+        <RazorpayAffordabilityWidget
+          amount={product?.sellingPrice ?? 0}
+          razorpayKey={RAZORPAY_KEY}
+        />
+      ) : null}
 
       {/* Desktop Order CTA Button — guarded */}
       <button
@@ -120,7 +131,7 @@ export default function PriceBlock({ product }: PriceBlockProps) {
           />
         </div>
         <p className="text-[#6e5c50] text-[11px] font-medium text-center leading-tight font-sans">
-          100% Quality Guarantee • Free Pan-India Courier • Cash on Delivery Available
+          100% Quality Guarantee  • Cash on Delivery Available
         </p>
       </div>
     </div>
