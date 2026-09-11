@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useCallback } from "react";
+import { useState, useEffect, Suspense, useCallback, useMemo } from "react";
 import useSWR from "swr";
 import Link from "next/link";
 import Image from "next/image";
@@ -29,21 +29,28 @@ const INDIAN_STATES = [
   "Uttar Pradesh",
   "West Bengal",
   "Gujarat",
-  "Rajasthan",
-  "Haryana",
   "Telangana",
   "Kerala",
-  "Madhya Pradesh",
+  "Rajasthan",
+  "Haryana",
   "Punjab",
-  "Bihar",
-  "Odisha",
   "Andhra Pradesh",
+  "Bihar",
+  "Madhya Pradesh",
+  "Odisha",
   "Assam",
+  "Jharkhand",
   "Chhattisgarh",
+  "Uttarakhand",
   "Goa",
   "Himachal Pradesh",
-  "Jharkhand",
-  "Uttarakhand",
+  "Tripura",
+  "Meghalaya",
+  "Manipur",
+  "Nagaland",
+  "Arunachal Pradesh",
+  "Mizoram",
+  "Sikkim",
   "Jammu and Kashmir",
   "Chandigarh",
   "Puducherry",
@@ -85,9 +92,27 @@ function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialCoupon = searchParams.get("coupon") || "";
+  const buyNowItemId = searchParams.get("buyNow") || "";
 
   const { user, isLoading: isAuthLoading } = useAuth();
-  const { items, subtotal, isLoaded, clear, remove } = useCart();
+  const { items: allCartItems, isLoaded, clear, remove } = useCart();
+
+  // If ?buyNow=... is present, isolate ONLY that item for express checkout
+  const buyNowItem = useMemo(() => {
+    if (!buyNowItemId) return undefined;
+    return allCartItems.find((i) => i.id === buyNowItemId);
+  }, [allCartItems, buyNowItemId]);
+
+  const items = useMemo(() => {
+    return buyNowItem ? [buyNowItem] : allCartItems;
+  }, [buyNowItem, allCartItems]);
+
+  const isExpressBuyNow = Boolean(buyNowItemId && buyNowItem);
+  const otherItemsCount = allCartItems.length - items.length;
+
+  const subtotal = useMemo(() => {
+    return items.reduce((sum, item) => sum + item.price * (item.quantity || 1), 0);
+  }, [items]);
 
   // Saved addresses — shared SWR cache key 'user-addresses' (same as account page)
   const { data: savedAddresses = [], isLoading: isAddressesLoading, mutate: mutateAddresses } = useSWR(
@@ -576,7 +601,11 @@ function CheckoutContent() {
         return;
       }
 
-      await syncCartWithServer(items, true);
+      if (isExpressBuyNow && buyNowItem) {
+        await syncCartWithServer(allCartItems, false);
+      } else {
+        await syncCartWithServer(items, true);
+      }
 
       const createRes = await orderApi.createOrder({
         addressId: effectiveAddressId,
@@ -595,6 +624,7 @@ function CheckoutContent() {
         notes: formData.notes || undefined,
         paymentMethod: "upi",
         paymentType: selectedPaymentModel,
+        cartItemId: isExpressBuyNow && buyNowItem ? (buyNowItem.serverItemId || buyNowItem.templateId) : undefined,
       });
 
       if (!createRes.success || !createRes.data) {
@@ -638,7 +668,11 @@ function CheckoutContent() {
             });
 
             if (verifyRes.success) {
-              clear(); // clear local cart
+              if (isExpressBuyNow && buyNowItemId) {
+                remove(buyNowItemId);
+              } else {
+                clear(); // clear local cart
+              }
               setOrderCompleted({
                 orderId: order.id,
                 items: [...items],
@@ -990,7 +1024,7 @@ function CheckoutContent() {
         </h1>
 
         {errorMessage && (
-          <div className="mb-6 bg-[#fdf2f2] border border-[#f5c6cb] text-[#901c1c] text-xs sm:text-sm px-4 py-3 rounded-xl flex items-center justify-between animate-fadeIn">
+          <div className="mb-6 bg-[#fdf2f2] border border-[#f5c6cb] text-[#901c1c] text-xs sm:text-sm px-4 py-3 rounded-sm flex items-center justify-between animate-fadeIn">
             <span>{errorMessage}</span>
             <button
               type="button"
@@ -1002,6 +1036,22 @@ function CheckoutContent() {
           </div>
         )}
 
+        {isExpressBuyNow && otherItemsCount > 0 && (
+          <div className="mb-6 bg-[#FAF6F0] border border-[#EAE4DC] rounded-sm p-3.5 flex flex-wrap items-center justify-between gap-2.5 text-xs text-[#5C534E] font-sans shadow-2xs">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-[#D47124] uppercase tracking-wider text-[10px] bg-[#FFF7ED] px-2 py-0.5 rounded-sm border border-[#FED7AA]">
+                Express Buy Now
+              </span>
+              <span>
+                Checking out this customized item. Your other {otherItemsCount} {otherItemsCount === 1 ? "item is" : "items are"} saved safely in your cart.
+              </span>
+            </div>
+            <Link href="/cart" className="text-[#D47124] hover:text-[#BA5D17] font-bold underline shrink-0">
+              View Full Cart
+            </Link>
+          </div>
+        )}
+
         <form
           onSubmit={handleCompleteOrder}
           className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-8 items-start"
@@ -1009,7 +1059,7 @@ function CheckoutContent() {
           {/* Left Column: Delivery Details & Payment */}
           <div className="flex flex-col gap-6">
             {/* Step 1: Shipping Address */}
-            <div className="bg-white border border-[#e8dfd5] rounded-2xl p-5 sm:p-6 shadow-sm">
+            <div className="bg-white border border-[#e8dfd5] rounded-sm p-5 sm:p-6 shadow-sm">
               <div className="flex items-center justify-between mb-5 pb-3 border-b border-[#f2ebdc]">
                 <div className="flex items-center gap-3">
                   <span className="w-6 h-6 rounded-full bg-[#e07a28] text-white flex items-center justify-center text-xs font-bold font-sans shrink-0">
@@ -1025,7 +1075,7 @@ function CheckoutContent() {
                   <button
                     type="button"
                     onClick={handleOpenAddAddress}
-                    className="flex items-center gap-1 text-xs font-semibold font-sans text-[#e07a28] hover:text-[#c96a1f] bg-[#fff8f2] hover:bg-[#ffede0] border border-[#f0c8a0] px-2.5 py-1.5 rounded-lg transition-all cursor-pointer"
+                    className="flex items-center gap-1 text-xs font-semibold font-sans text-[#e07a28] hover:text-[#c96a1f] bg-[#fff8f2] hover:bg-[#ffede0] border border-[#f0c8a0] px-2.5 py-1.5 rounded-sm transition-all cursor-pointer"
                   >
                     <svg
                       width="12"
@@ -1045,11 +1095,11 @@ function CheckoutContent() {
                 )}
               </div>
 
-              {/* Case A: User HAS Saved Addresses */}
+              {/* Case A: Existing addresses exist */}
               {isAddressesLoading ? (
                 <div className="flex flex-col gap-3 mb-5">
-                  <div className="skeleton-shimmer rounded-xl h-[72px] w-full" />
-                  <div className="skeleton-shimmer rounded-xl h-[72px] w-full" />
+                  <div className="skeleton-shimmer rounded-sm h-[72px] w-full" />
+                  <div className="skeleton-shimmer rounded-sm h-[72px] w-full" />
                 </div>
               ) : hasSavedAddresses ? (
                 <div className="mb-5 flex flex-col gap-3">
@@ -1063,7 +1113,7 @@ function CheckoutContent() {
                         <div
                           key={addr.id}
                           onClick={() => handleAddressSelect(addr.id)}
-                          className={`p-3.5 rounded-xl border text-xs font-sans cursor-pointer transition-all flex flex-col justify-between ${
+                          className={`p-3.5 rounded-sm border text-xs font-sans cursor-pointer transition-all flex flex-col justify-between ${
                             isSelected
                               ? "border-[#e07a28] bg-[#fffbf7] ring-1 ring-[#e07a28]/30 shadow-sm"
                               : "border-[#e8dfd5] hover:border-[#c9baa7] hover:bg-[#faf7f2]"
@@ -1083,11 +1133,11 @@ function CheckoutContent() {
                                     <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
                                   )}
                                 </span>
-                                <span className="font-bold uppercase tracking-wider text-[10px] bg-[#f2ebdc] text-[#5a3a1a] px-2 py-0.5 rounded-md shrink-0">
+                                <span className="font-bold uppercase tracking-wider text-[10px] bg-[#f2ebdc] text-[#5a3a1a] px-2 py-0.5 rounded-sm shrink-0">
                                   {addr.label || "Address"}
                                 </span>
                                 {addr.isDefault && (
-                                  <span className="text-[9px] font-bold text-[#1e7234] bg-[#eaf5ec] px-1.5 py-0.5 rounded uppercase shrink-0">
+                                  <span className="text-[9px] font-bold text-[#1e7234] bg-[#eaf5ec] px-1.5 py-0.5 rounded-sm uppercase shrink-0">
                                     Default
                                   </span>
                                 )}
@@ -1100,7 +1150,7 @@ function CheckoutContent() {
                                   e.stopPropagation();
                                   handleOpenEditAddress(addr);
                                 }}
-                                className="text-xs font-semibold text-[#e07a28] hover:text-[#c96a1f] px-2.5 py-1 rounded-md hover:bg-[#fff3e8] border border-[#f0c8a0] transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                                className="text-xs font-semibold text-[#e07a28] hover:text-[#c96a1f] px-2.5 py-1 rounded-sm hover:bg-[#fff3e8] border border-[#f0c8a0] transition-colors flex items-center gap-1 cursor-pointer shrink-0"
                                 title="Edit or complete address details"
                               >
                                 <svg
@@ -1147,7 +1197,7 @@ function CheckoutContent() {
                     {/* Option to add a different address via bottom sheet */}
                     <div
                       onClick={handleOpenAddAddress}
-                      className="p-3.5 rounded-xl border border-dashed border-[#d5c7b5] hover:border-[#e07a28] bg-[#faf7f2] hover:bg-[#fffbf7] text-xs font-sans cursor-pointer transition-all flex items-center gap-2.5 group"
+                      className="p-3.5 rounded-sm border border-dashed border-[#d5c7b5] hover:border-[#e07a28] bg-[#faf7f2] hover:bg-[#fffbf7] text-xs font-sans cursor-pointer transition-all flex items-center gap-2.5 group"
                     >
                       <div className="w-4 h-4 rounded-full border border-[#a89887] group-hover:border-[#e07a28] flex items-center justify-center shrink-0 transition-colors">
                         <span className="w-1.5 h-1.5 rounded-full bg-[#e07a28] opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1162,7 +1212,7 @@ function CheckoutContent() {
 
               {/* Case B: First-time Buyer (Prompt to add delivery address via bottom sheet) */}
               {!hasSavedAddresses && !isAddressesLoading && (
-                <div className="flex flex-col items-center justify-center p-6 text-center border border-dashed border-[#dcd4c8] rounded-2xl bg-[#faf7f2] mb-4">
+                <div className="flex flex-col items-center justify-center p-6 text-center border border-dashed border-[#dcd4c8] rounded-sm bg-[#faf7f2] mb-4">
                   <div className="w-12 h-12 rounded-full bg-[#f2ebdc] text-[#5a3a1a] flex items-center justify-center mb-3">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
@@ -1178,7 +1228,7 @@ function CheckoutContent() {
                   <button
                     type="button"
                     onClick={handleOpenAddAddress}
-                    className="h-11 px-5 rounded-xl bg-[#e07a28] hover:bg-[#c96a1f] text-white text-xs font-bold font-sans uppercase tracking-wider shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+                    className="h-11 px-5 rounded-sm bg-[#e07a28] hover:bg-[#c96a1f] text-white text-xs font-bold font-sans uppercase tracking-wider shadow-sm transition-all flex items-center gap-2 cursor-pointer"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -1203,7 +1253,7 @@ function CheckoutContent() {
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="name@example.com"
-                      className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
+                      className="bg-white border border-[#dcd4c8] rounded-sm px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
                     />
                   </div>
 
@@ -1218,7 +1268,7 @@ function CheckoutContent() {
                       value={formData.notes}
                       onChange={handleChange}
                       placeholder="e.g. Please pack carefully as an anniversary gift"
-                      className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
+                      className="bg-white border border-[#dcd4c8] rounded-sm px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
                     />
                   </div>
                 </div>
@@ -1226,7 +1276,7 @@ function CheckoutContent() {
             </div>
 
             {/* Step 2: Payment Mode */}
-            <div className="bg-white border border-[#e8dfd5] rounded-2xl p-4 sm:p-5 shadow-xs">
+            <div className="bg-white border border-[#e8dfd5] rounded-sm p-4 sm:p-5 shadow-xs">
               <div className="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-[#f2ebdc]">
                 <div className="flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-[#e07a28] text-white flex items-center justify-center text-[11px] font-bold font-sans shrink-0">
@@ -1258,7 +1308,7 @@ function CheckoutContent() {
                       setSelectedPaymentModel("FULL_ONLINE");
                     }
                   }}
-                  className={`p-4 rounded-2xl border transition-all cursor-pointer text-left relative flex flex-col justify-between ${
+                  className={`p-4 rounded-sm border transition-all cursor-pointer text-left relative flex flex-col justify-between ${
                     selectedPaymentModel === "FULL_ONLINE"
                       ? "border-[#D47124] bg-[#FAF6F0] ring-1 ring-[#D47124]/30 shadow-xs"
                       : "border-[#EAE4DC] hover:border-[#D5C7B5] bg-white"
@@ -1282,18 +1332,18 @@ function CheckoutContent() {
                           100% Online Payment
                         </span>
                       </div>
-                      <span className="text-[10px] font-bold text-[#047857] bg-[#ECFDF5] border border-[#A7F3D0] px-2 py-0.5 rounded-full uppercase shrink-0">
+                      <span className="text-[10px] font-bold text-[#047857] bg-[#ECFDF5] border border-[#A7F3D0] px-2 py-0.5 rounded-sm uppercase shrink-0">
                         Free Delivery
                       </span>
                     </div>
 
                     <p className="pl-6 text-xs text-[#786F66] font-sans leading-relaxed">
-                      Instant confirmation via UPI, GPay, PhonePe, Cards, or Net Banking. Zero doorstep fee.
+                      Instant confirmation via UPI, Cards & Net Banking. Zero doorstep fee.
                     </p>
                   </div>
 
                   <div className="pl-6 pt-3 mt-3 border-t border-[#EAE4DC]/70 flex items-baseline justify-between">
-                    <span className="text-[10px] text-[#786F66] uppercase font-bold tracking-wider">Pay Online</span>
+                    <span className="text-[10px] text-[#786F66] uppercase font-bold tracking-wider">Pay Full Amount</span>
                     <span className="text-sm font-bold text-[#1A1412]">
                       ₹{finalTotal.toLocaleString("en-IN")}
                     </span>
@@ -1311,7 +1361,7 @@ function CheckoutContent() {
                       setSelectedPaymentModel("PARTIAL_COD");
                     }
                   }}
-                  className={`p-4 rounded-2xl border transition-all cursor-pointer text-left relative flex flex-col justify-between ${
+                  className={`p-4 rounded-sm border transition-all cursor-pointer text-left relative flex flex-col justify-between ${
                     selectedPaymentModel === "PARTIAL_COD"
                       ? "border-[#D47124] bg-[#FAF6F0] ring-1 ring-[#D47124]/30 shadow-xs"
                       : "border-[#EAE4DC] hover:border-[#D5C7B5] bg-white"
@@ -1335,18 +1385,18 @@ function CheckoutContent() {
                           Pay on Delivery
                         </span>
                       </div>
-                      <span className="text-[10px] font-bold text-[#D47124] bg-[#FFF7ED] border border-[#FED7AA] px-2 py-0.5 rounded-full uppercase shrink-0">
+                      <span className="text-[10px] font-bold text-[#D47124] bg-[#FFF7ED] border border-[#FED7AA] px-2 py-0.5 rounded-sm uppercase shrink-0">
                         ₹570 Advance
                       </span>
                     </div>
 
                     <p className="pl-6 text-xs text-[#786F66] font-sans leading-relaxed">
-                      ₹500 custom item advance + ₹70 courier handling now. Balance payable on delivery.
+                      ₹500 custom item advance + ₹70 courier handling now. Balance on delivery.
                     </p>
                   </div>
 
                   <div className="pl-6 pt-3 mt-3 border-t border-[#EAE4DC]/70 flex items-baseline justify-between">
-                    <span className="text-[10px] text-[#786F66] uppercase font-bold tracking-wider">Pay Online</span>
+                    <span className="text-[10px] text-[#786F66] uppercase font-bold tracking-wider">Pay Advance Now</span>
                     <span className="text-sm font-bold text-[#1A1412]">
                       ₹{codPayNowTotal.toLocaleString("en-IN")}
                     </span>
@@ -1354,64 +1404,19 @@ function CheckoutContent() {
                 </div>
               </div>
 
-              {/* Financial Transparency Summary Block */}
-              <div className="bg-[#FAF8F5] border border-[#EAE4DC] rounded-2xl p-4 sm:p-5 font-sans">
-                <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-[#EAE4DC]">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#786F66]">
-                    Payment Breakdown
-                  </span>
-                  <span className="text-[11px] font-bold text-[#1A1412]">
-                    {selectedPaymentModel === "PARTIAL_COD" ? "Partial COD Model" : "Full Online Model"}
-                  </span>
+              {/* Trust Badges Row */}
+              <div className="pt-2.5 border-t border-[#f2ebdc] flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#786F66] font-sans">
+                <div className="flex items-center gap-1.5">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#047857" strokeWidth="2.2" className="shrink-0">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                  <span>256-Bit SSL Encrypted Checkout via Razorpay</span>
                 </div>
-
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between items-center text-[#5C534E]">
-                    <span>Cart Items Subtotal</span>
-                    <span className="font-medium text-[#1A1412]">₹{subtotal.toLocaleString("en-IN")}</span>
-                  </div>
-
-                  {discountRupees > 0 && (
-                    <div className="flex justify-between items-center text-[#047857]">
-                      <span>Promo Savings {appliedPromo?.coupon.code ? `(${appliedPromo.coupon.code})` : ""}</span>
-                      <span className="font-semibold">- ₹{discountRupees.toLocaleString("en-IN")}</span>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between items-center text-[#5C534E]">
-                    <span>Insured Delivery & Handling</span>
-                    {selectedPaymentModel === "PARTIAL_COD" ? (
-                      <span className="font-medium text-[#1A1412]">₹70</span>
-                    ) : (
-                      <span className="font-semibold text-[#047857]">Complimentary (Free)</span>
-                    )}
-                  </div>
-
-                  <div className="flex justify-between items-center pt-2.5 border-t border-[#EAE4DC] text-sm font-bold text-[#1A1412]">
-                    <span>Due Online Now</span>
-                    <span className="text-base text-[#D47124]">
-                      ₹{payNowRupees.toLocaleString("en-IN")}
-                    </span>
-                  </div>
-
-                  {selectedPaymentModel === "PARTIAL_COD" && (
-                    <div className="flex justify-between items-center pt-1.5 text-xs text-[#5C534E]">
-                      <span>Balance on Delivery (Cash or UPI)</span>
-                      <span className="font-bold text-[#1A1412]">
-                        ₹{balanceDueRupees.toLocaleString("en-IN")}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-3.5 pt-3 border-t border-[#EAE4DC] flex items-center justify-between text-[11px] text-[#786F66]">
-                  <div className="flex items-center gap-1.5">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#047857" strokeWidth="2.2" className="shrink-0">
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    </svg>
-                    <span>256-Bit SSL Encrypted Checkout via Razorpay</span>
-                  </div>
-                  <span className="text-[#047857] font-semibold hidden sm:inline">100% Replacement Guarantee</span>
+                <div className="flex items-center gap-1 text-[#047857] font-semibold">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>100% Replacement Guarantee</span>
                 </div>
               </div>
             </div>
@@ -1419,7 +1424,7 @@ function CheckoutContent() {
 
           {/* Right Column: Order Review & Summary */}
           <div className="flex flex-col gap-4 sticky top-24">
-            <div className="bg-white border border-[#e8dfd5] rounded-2xl p-5 sm:p-6 shadow-sm">
+            <div className="bg-white border border-[#e8dfd5] rounded-sm p-5 sm:p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4 pb-2 border-b border-[#f2ebdc]">
                 <h2 className="text-sm sm:text-base font-serif font-bold text-[#2e1e12]">
                   Order Review
@@ -1437,7 +1442,7 @@ function CheckoutContent() {
                     className="flex gap-3 items-start py-2.5 border-b border-[#f5ede0] last:border-0 group"
                   >
                     {item.previewDataUrl ? (
-                      <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-[#e8dfd5] shrink-0">
+                      <div className="relative w-14 h-14 rounded-sm overflow-hidden border border-[#e8dfd5] shrink-0">
                         <Image
                           src={item.previewDataUrl}
                           alt={item.templateName}
@@ -1448,14 +1453,14 @@ function CheckoutContent() {
                         />
                       </div>
                     ) : (
-                      <div className="w-14 h-14 rounded-lg bg-[#faf7f2] border border-[#e8dfd5] flex items-center justify-center text-[10px] text-[#6e5c50]">
+                      <div className="w-14 h-14 rounded-sm bg-[#faf7f2] border border-[#e8dfd5] flex items-center justify-center text-[10px] text-[#6e5c50]">
                         Lithophane
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <span className="text-[9px] bg-[#f2ebdc] text-[#5a3a1a] px-1.5 py-0.5 rounded font-bold uppercase font-sans">
+                          <span className="text-[9px] bg-[#f2ebdc] text-[#5a3a1a] px-1.5 py-0.5 rounded-sm font-bold uppercase font-sans">
                             {item.templateName}
                           </span>
                           <h4 className="text-xs font-serif font-semibold text-[#2e1e12] truncate mt-0.5">
@@ -1468,7 +1473,7 @@ function CheckoutContent() {
                           type="button"
                           onClick={() => handleRemoveReviewItem(item.id)}
                           title="Remove item"
-                          className="text-[#998877] hover:text-[#b83a3a] hover:bg-[#fdf2f2] p-1.5 rounded-lg transition-colors shrink-0"
+                          className="text-[#998877] hover:text-[#b83a3a] hover:bg-[#fdf2f2] p-1.5 rounded-sm transition-colors shrink-0"
                         >
                           <svg
                             width="14"
@@ -1486,9 +1491,17 @@ function CheckoutContent() {
                         </button>
                       </div>
 
-                      <div className="flex justify-between items-baseline mt-1.5">
-                        <span className="text-xs text-[#6e5c50] font-sans">Qty: {item.quantity}</span>
-                        <span className="text-xs font-bold font-sans text-[#2e1e12]">
+                      {item.texts && Object.values(item.texts).some((t) => t?.value) && (
+                        <p className="text-[11px] text-[#6e5c50] truncate font-sans mt-0.5 italic">
+                          &ldquo;{Object.values(item.texts).map((t) => t?.value).filter(Boolean).join(" · ")}&rdquo;
+                        </p>
+                      )}
+
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className="text-[11px] text-[#8c7b70] font-sans">
+                          Qty: {item.quantity}
+                        </span>
+                        <span className="text-xs font-bold text-[#2e1e12] font-sans">
                           ₹{(item.price * item.quantity).toLocaleString("en-IN")}
                         </span>
                       </div>
@@ -1500,9 +1513,9 @@ function CheckoutContent() {
               {/* Promo Code Section */}
               <div className="mb-4 pb-4 border-b border-[#f2ebdc]">
                 {appliedPromo ? (
-                  <div className="flex items-center justify-between bg-[#f0f9f2] border border-[#bfe5c6] rounded-xl px-3.5 py-2.5 text-xs text-[#1e7234] font-sans animate-fadeIn">
+                  <div className="flex items-center justify-between bg-[#f0f9f2] border border-[#bfe5c6] rounded-sm px-3.5 py-2.5 text-xs text-[#1e7234] font-sans animate-fadeIn">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-6 h-6 rounded-md bg-[#e0f3e4] text-[#1e7234] flex items-center justify-center shrink-0 border border-[#bfe5c6]">
+                      <div className="w-6 h-6 rounded-sm bg-[#e0f3e4] text-[#1e7234] flex items-center justify-center shrink-0 border border-[#bfe5c6]">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
@@ -1539,13 +1552,13 @@ function CheckoutContent() {
                           setPromoInput(e.target.value.toUpperCase());
                           if (promoError) setPromoError("");
                         }}
-                        className="flex-1 bg-white border border-[#dcd4c8] rounded-xl px-3 py-2 text-xs sm:text-sm uppercase font-sans text-[#2e1e12] focus:outline-none focus:border-[#e07a28]"
+                        className="flex-1 bg-white border border-[#dcd4c8] rounded-sm px-3 py-2 text-xs sm:text-sm uppercase font-sans text-[#2e1e12] focus:outline-none focus:border-[#e07a28]"
                       />
                       <button
                         type="button"
                         disabled={promoLoading || !promoInput.trim()}
                         onClick={() => applyCouponCode(promoInput.trim())}
-                        className="bg-[#2e1e12] hover:bg-[#443021] text-white px-3.5 py-2 rounded-xl text-xs font-bold font-sans transition-colors disabled:opacity-50 cursor-pointer"
+                        className="bg-[#2e1e12] hover:bg-[#443021] text-white px-3.5 py-2 rounded-sm text-xs font-bold font-sans transition-colors disabled:opacity-50 cursor-pointer"
                       >
                         {promoLoading ? "..." : "Apply"}
                       </button>
@@ -1560,7 +1573,7 @@ function CheckoutContent() {
                     {/* Zepto/Blinkit-style "View all available coupons" banner */}
                     <div
                       onClick={() => setIsCouponDrawerOpen(true)}
-                      className="mt-2.5 bg-[#fdfaf5] border border-[#e8dfd5] hover:border-[#e07a28]/60 active:bg-[#f5ede0] rounded-xl p-2.5 flex items-center justify-between gap-2 cursor-pointer transition-colors group"
+                      className="mt-2.5 bg-[#fdfaf5] border border-[#e8dfd5] hover:border-[#e07a28]/60 active:bg-[#f5ede0] rounded-sm p-2.5 flex items-center justify-between gap-2 cursor-pointer transition-colors group"
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
@@ -1571,7 +1584,7 @@ function CheckoutContent() {
                       }}
                     >
                       <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-md bg-[#fdf2e8] text-[#e07a28] flex items-center justify-center shrink-0 border border-[#f8dec8]">
+                        <div className="w-6 h-6 rounded-sm bg-[#fdf2e8] text-[#e07a28] flex items-center justify-center shrink-0 border border-[#f8dec8]">
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
                             <line x1="7" y1="7" x2="7.01" y2="7" />
@@ -1630,7 +1643,7 @@ function CheckoutContent() {
                       </span>
                     </div>
 
-                    <div className="bg-[#fff8f2] border border-[#f5d9c2] rounded-xl p-2.5 mt-1 flex justify-between items-center text-xs">
+                    <div className="bg-[#fff8f2] border border-[#f5d9c2] rounded-sm p-2.5 mt-1 flex justify-between items-center text-xs">
                       <span className="text-[#5a3a1a] font-medium">Balance on Delivery</span>
                       <span className="font-bold text-[#2e1e12]">
                         ₹{balanceDueRupees.toLocaleString("en-IN")}
@@ -1654,11 +1667,11 @@ function CheckoutContent() {
                 )}
               </div>
 
-              {/* Submit CTA */}
+              {/* Submit CTA - Hidden on mobile to prevent double CTA, only visible on desktop/tablet */}
               <button
                 type="submit"
                 disabled={isProcessing}
-                className="w-full mt-5 bg-[#e07a28] hover:bg-[#c96a1f] active:bg-[#b55c14] text-white font-bold font-sans text-xs sm:text-sm uppercase tracking-wider py-3.5 sm:py-4 rounded-xl shadow-[0_4px_14px_rgba(224,122,40,0.35)] transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+                className="hidden sm:flex w-full mt-5 bg-[#e07a28] hover:bg-[#c96a1f] active:bg-[#b55c14] text-white font-bold font-sans text-xs sm:text-sm uppercase tracking-wider py-3.5 sm:py-4 rounded-sm shadow-[0_4px_14px_rgba(224,122,40,0.35)] transition-all active:scale-[0.98] items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
               >
                 {isProcessing ? (
                   <div className="flex items-center gap-2">
@@ -1687,7 +1700,7 @@ function CheckoutContent() {
                   <>
                     <span>
                       {selectedPaymentModel === "PARTIAL_COD"
-                        ? "Pay Advance ₹570"
+                        ? `Pay Advance ₹${payNowRupees.toLocaleString("en-IN")}`
                         : `Pay ₹${finalTotal.toLocaleString("en-IN")}`}
                     </span>
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -1712,7 +1725,7 @@ function CheckoutContent() {
             </div>
           </div>
 
-          {/* ── Mobile Sticky Bottom Bar (Zepto/Swiggy Style) ──────── */}
+          {/* ── Mobile Sticky Bottom Bar (Single Unified CTA on Mobile) ──────── */}
           <div className="sm:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-[#e8dfd5] p-3 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center justify-between gap-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
             <div className="min-w-0">
               <span className="text-[10px] uppercase font-bold text-[#6e5c50] tracking-wider block">
@@ -1733,14 +1746,16 @@ function CheckoutContent() {
             <button
               type="submit"
               disabled={isProcessing}
-              className="h-11 px-5 rounded-xl bg-[#e07a28] hover:bg-[#c96a1f] active:scale-[0.98] text-white text-xs font-bold font-sans uppercase tracking-wider shadow-[0_2px_8px_rgba(224,122,40,0.3)] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+              className="h-11 px-5 rounded-sm bg-[#e07a28] hover:bg-[#c96a1f] active:scale-[0.98] text-white text-xs font-bold font-sans uppercase tracking-wider shadow-[0_2px_8px_rgba(224,122,40,0.3)] transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
             >
               {isProcessing ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
                   <span>
-                    {selectedPaymentModel === "PARTIAL_COD" ? "Pay ₹570" : "Pay Now"}
+                    {selectedPaymentModel === "PARTIAL_COD"
+                      ? `Pay Advance ₹${payNowRupees.toLocaleString("en-IN")}`
+                      : `Pay ₹${finalTotal.toLocaleString("en-IN")}`}
                   </span>
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                     <path
@@ -1813,7 +1828,7 @@ function CheckoutContent() {
               >
                 <div className="p-5 sm:p-6 space-y-4 text-xs sm:text-sm font-sans flex-1">
                   {addressModalError && (
-                    <div className="bg-[#fdf2f2] border border-[#f5c6cb] text-[#901c1c] text-xs px-3.5 py-2.5 rounded-xl">
+                    <div className="bg-[#fdf2f2] border border-[#f5c6cb] text-[#901c1c] text-xs px-3.5 py-2.5 rounded-sm">
                       {addressModalError}
                     </div>
                   )}
@@ -1842,7 +1857,7 @@ function CheckoutContent() {
                           setModalForm((prev) => ({ ...prev, recipientName: e.target.value }))
                         }
                         placeholder="e.g. Rittik Sharma"
-                        className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
+                        className="bg-white border border-[#dcd4c8] rounded-sm px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
                       />
                     </div>
 
@@ -1852,7 +1867,7 @@ function CheckoutContent() {
                         Mobile Number <span className="text-[#b83a3a]">*</span>
                       </label>
                       <div className="flex items-center">
-                        <span className="bg-[#f5ede0] border border-r-0 border-[#dcd4c8] text-[#5a3a1a] text-xs font-bold px-3 py-2.5 rounded-l-xl select-none shrink-0">
+                        <span className="bg-[#f5ede0] border border-r-0 border-[#dcd4c8] text-[#5a3a1a] text-xs font-bold px-3 py-2.5 rounded-l-sm select-none shrink-0">
                           +91
                         </span>
                         <input
@@ -1867,7 +1882,7 @@ function CheckoutContent() {
                             }))
                           }
                           placeholder="10-digit mobile number"
-                          className="w-full bg-white border border-[#dcd4c8] rounded-r-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
+                          className="w-full bg-white border border-[#dcd4c8] rounded-r-sm px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
                         />
                       </div>
                     </div>
@@ -1891,7 +1906,7 @@ function CheckoutContent() {
                           }))
                         }
                         placeholder="Optional 10-digit backup mobile number"
-                        className="w-full bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
+                        className="w-full bg-white border border-[#dcd4c8] rounded-sm px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
                       />
                     </div>
                   </div>
@@ -1917,7 +1932,7 @@ function CheckoutContent() {
                       value={modalForm.line1}
                       onChange={(e) => setModalForm((prev) => ({ ...prev, line1: e.target.value }))}
                       placeholder="e.g. Flat 301, Tower B, Silver Oak Residency"
-                      className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
+                      className="bg-white border border-[#dcd4c8] rounded-sm px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
                     />
                   </div>
 
@@ -1932,7 +1947,7 @@ function CheckoutContent() {
                       value={modalForm.line2}
                       onChange={(e) => setModalForm((prev) => ({ ...prev, line2: e.target.value }))}
                       placeholder="e.g. 12th Main, 4th Block, Koramangala"
-                      className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
+                      className="bg-white border border-[#dcd4c8] rounded-sm px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
                     />
                   </div>
 
@@ -1949,7 +1964,7 @@ function CheckoutContent() {
                       value={modalForm.landmark}
                       onChange={(e) => setModalForm((prev) => ({ ...prev, landmark: e.target.value }))}
                       placeholder="e.g. Near Apollo Pharmacy"
-                      className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
+                      className="bg-white border border-[#dcd4c8] rounded-sm px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
                     />
                   </div>
 
@@ -1972,7 +1987,7 @@ function CheckoutContent() {
                           }))
                         }
                         placeholder="6 digits"
-                        className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
+                        className="bg-white border border-[#dcd4c8] rounded-sm px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
                       />
                     </div>
 
@@ -1987,7 +2002,7 @@ function CheckoutContent() {
                         value={modalForm.city}
                         onChange={(e) => setModalForm((prev) => ({ ...prev, city: e.target.value }))}
                         placeholder="e.g. Bengaluru"
-                        className="bg-white border border-[#dcd4c8] rounded-xl px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
+                        className="bg-white border border-[#dcd4c8] rounded-sm px-3.5 py-2.5 text-sm text-[#2e1e12] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[#e07a28]/15 transition-all"
                       />
                     </div>
 
@@ -2047,7 +2062,7 @@ function CheckoutContent() {
                           key={item.id}
                           type="button"
                           onClick={() => setModalForm((prev) => ({ ...prev, label: item.id }))}
-                          className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                          className={`px-3 py-1.5 rounded-sm border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                             modalForm.label === item.id
                               ? "border-[#e07a28] bg-[#fff8f2] text-[#e07a28] shadow-2xs"
                               : "border-[#e5ddd0] text-[#6e5c50] hover:bg-[#faf7f2] bg-white"
@@ -2081,14 +2096,14 @@ function CheckoutContent() {
                   <button
                     type="button"
                     onClick={() => setIsAddressModalOpen(false)}
-                    className="h-11 px-4 rounded-xl border border-[#d5c7b5] text-xs font-semibold text-[#5a3a1a] hover:bg-[#faf7f2] active:bg-[#f0e8dc] transition-colors cursor-pointer shrink-0 flex items-center justify-center"
+                    className="h-11 px-4 rounded-sm border border-[#d5c7b5] text-xs font-semibold text-[#5a3a1a] hover:bg-[#faf7f2] active:bg-[#f0e8dc] transition-colors cursor-pointer shrink-0 flex items-center justify-center"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSavingAddress}
-                    className="h-11 flex-1 px-4 rounded-xl bg-[#e07a28] hover:bg-[#c96a1f] active:scale-[0.99] text-white text-xs sm:text-sm font-bold tracking-wide transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                    className="h-11 flex-1 px-4 rounded-sm bg-[#e07a28] hover:bg-[#c96a1f] active:scale-[0.99] text-white text-xs sm:text-sm font-bold tracking-wide transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
                   >
                     {isSavingAddress ? (
                       <>
@@ -2230,7 +2245,7 @@ function CheckoutContent() {
                   setPaymentRecoveryModal(null);
                   setErrorMessage("");
                 }}
-                className="w-full bg-[#D47124] hover:bg-[#BA5D17] text-white text-xs font-bold uppercase tracking-wider py-3.5 px-4 rounded-xl transition-all shadow-sm active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
+                className="w-full bg-[#D47124] hover:bg-[#BA5D17] text-white text-xs font-bold uppercase tracking-wider py-3.5 px-4 rounded-sm transition-all shadow-sm active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
               >
                 <span>Retry Payment</span>
                 <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
@@ -2242,7 +2257,7 @@ function CheckoutContent() {
                 href="https://wa.me/919035765038?text=Hello%20ICR%20Studio%2C%20I%20had%20an%20issue%20during%20checkout%20for%20my%20personalized%20lithophane%20lamp."
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full bg-white hover:bg-[#FAF8F5] border border-[#EAE4DC] text-[#1A1412] hover:text-[#D47124] text-xs font-semibold py-3 px-4 rounded-xl transition-colors inline-flex items-center justify-center gap-2 shadow-2xs"
+                className="w-full bg-white hover:bg-[#FAF8F5] border border-[#EAE4DC] text-[#1A1412] hover:text-[#D47124] text-xs font-semibold py-3 px-4 rounded-sm transition-colors inline-flex items-center justify-center gap-2 shadow-2xs"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366">
                   <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.664-.698c.969.587 1.961.913 3.013.913h.005c3.181 0 5.768-2.586 5.769-5.766.001-3.181-2.585-5.768-5.769-5.768zm7.391 10.963c-.416.924-2.146 1.776-3.033 1.896-.807.108-1.854.195-5.326-1.246-4.437-1.843-7.29-6.386-7.51-6.684-.22-.299-1.802-2.399-1.802-4.577 0-2.179 1.139-3.25 1.545-3.693.407-.444.887-.555 1.183-.555.297 0 .593.003.854.016.277.014.646-.105 1.01.767.416.999 1.42 3.469 1.545 3.722.126.253.21.55.042.884-.168.334-.253.541-.5.83-.247.288-.521.644-.744.863-.247.243-.505.508-.217.999.288.491 1.282 2.115 2.753 3.424 1.892 1.684 3.486 2.206 3.981 2.45.495.245.786.205 1.077-.128.291-.334 1.25-1.458 1.583-1.959.334-.5.667-.417 1.125-.25.458.167 2.915 1.375 3.414 1.625.5.25.833.375.958.583.125.208.125 1.208-.291 2.132z"/>

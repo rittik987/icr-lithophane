@@ -5,6 +5,9 @@ const nextConfig: NextConfig = {
   // physical device (Android / iOS) connected to the same Wi-Fi as the dev machine.
   allowedDevOrigins: ["192.168.1.7"],
 
+  // Disable floating dev indicators that overlap navigation buttons on mobile
+  devIndicators: false,
+
   images: {
     formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],

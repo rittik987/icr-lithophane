@@ -22,7 +22,7 @@ export default async function HomePage() {
     <>
       {/* ── Fixed chrome ──────────────────────────────────────── */}
       {/* <AnnouncementBanner /> */}
-      <Header cartCount={0} />
+      <Header />
 
       {/* ── Scrollable page body ─────────────────────────────── */}
       <main className="bg-[#faf7f2] min-h-screen pt-16 pb-20 lg:pb-0">
