@@ -591,6 +591,8 @@ export const orderApi = {
     notes?: string;
     paymentMethod?: "upi" | "card" | "netbanking" | "wallet";
     paymentType?: "FULL_ONLINE" | "PARTIAL_COD";
+    cartItemId?: string;
+    cartItemIds?: string[];
   }) {
     return apiRequest<{ order: ServerOrder; razorpay: RazorpayOrderDetails }>("/orders", {
       method: "POST",

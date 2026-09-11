@@ -175,8 +175,8 @@ export default function CustomizeView({ initialProduct }: CustomizeViewProps) {
         customPreviewUrl,
         { sellingPrice, mrp }
       );
-      addToCart(payload);
-      router.push("/checkout");
+      const createdItem = addToCart(payload);
+      router.push(`/checkout?buyNow=${encodeURIComponent(createdItem.id)}`);
     } catch (err) {
       console.error("Failed to place order:", err);
       alert("Something went wrong preparing your order. Please try again.");
