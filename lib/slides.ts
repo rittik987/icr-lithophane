@@ -1,4 +1,3 @@
-import { ASSETS } from "./assets";
 import { StorefrontProduct } from "./api";
 
 export interface Slide {
@@ -9,36 +8,9 @@ export interface Slide {
   isVideo: boolean;
 }
 
-export const DEFAULT_SLIDES: Slide[] = [
-  {
-    id: 0,
-    src: ASSETS.slideBacklitDimRoom,
-    alt: "ICR Lithophane backlit demo in dim room",
-    label: "Video Demo • 0:15",
-    isVideo: true,
-  },
-  {
-    id: 1,
-    src: ASSETS.slideUnlitDaytime,
-    alt: "Artisanal unlit state daytime",
-    label: "Natural Daylight (Unlit)",
-    isVideo: false,
-  },
-  {
-    id: 2,
-    src: ASSETS.slideLivingRoom,
-    alt: "Glowing solid walnut lithophane in living room",
-    label: "Living Room Ambient Glow",
-    isVideo: false,
-  },
-  {
-    id: 3,
-    src: ASSETS.slideWalnutDetail,
-    alt: "Handcrafted solid walnut joinery close-up",
-    label: "Solid Walnut Handcraft",
-    isVideo: false,
-  },
-];
+// Default slides shown when a product has no media uploaded yet.
+// Add your own images to /public/slides/ and reference them here.
+export const DEFAULT_SLIDES: Slide[] = [];
 
 export const SLIDES: Slide[] = DEFAULT_SLIDES;
 

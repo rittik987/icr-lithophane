@@ -1,6 +1,5 @@
 "use client";
 
-import { ASSETS } from "./assets";
 
 export interface CustomerReview {
   id: string;
@@ -27,10 +26,7 @@ export const INITIAL_REVIEWS: CustomerReview[] = [
     quote:
       "Gifted this to my parents for their 30th anniversary. Seeing their wedding photo glow warmly on the Diwali table brought tears to my mother's eyes. The 3D depth and walnut finish are unbelievable.",
     templateName: "Happy Anniversary",
-    images: [
-      ASSETS.slideBacklitDimRoom,
-      ASSETS.slideLivingRoom,
-    ],
+    images: [],
     verified: true,
     helpfulCount: 24,
   },
@@ -43,9 +39,7 @@ export const INITIAL_REVIEWS: CustomerReview[] = [
     quote:
       "The walnut finish is top-notch, solid and premium. The lighting is gentle and not harsh. Perfect bedside companion for evening reading.",
     templateName: "Single Portrait",
-    images: [
-      ASSETS.slideWalnutDetail,
-    ],
+    images: [],
     verified: true,
     helpfulCount: 16,
   },
@@ -58,9 +52,7 @@ export const INITIAL_REVIEWS: CustomerReview[] = [
     quote:
       "Turnaround time was fast and packaging was pristine. Truly a unique personalized keepsake that captures emotion far better than any 2D framed print.",
     templateName: "Happy Anniversary",
-    images: [
-      ASSETS.slideLivingRoom,
-    ],
+    images: [],
     verified: true,
     helpfulCount: 19,
   },
