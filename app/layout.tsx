@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import { ToastProvider } from "@/context/ToastContext";
 import { AuthProvider } from "@/context/AuthContext";
 import CapacitorInit from "@/components/CapacitorInit";
 import PullToRefresh from "@/components/PullToRefresh";
+import ReferralTracker from "@/components/ReferralTracker";
 
 export const viewport: Viewport = {
   themeColor: "#ffffff",
@@ -45,6 +47,9 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <ToastProvider>
           <AuthProvider>
+            <Suspense fallback={null}>
+              <ReferralTracker />
+            </Suspense>
             <CapacitorInit />
             <PullToRefresh>{children}</PullToRefresh>
           </AuthProvider>

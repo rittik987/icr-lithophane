@@ -311,8 +311,20 @@ function CheckoutContent() {
   );
 
   useEffect(() => {
-    if (initialCoupon && isLoaded && subtotal > 0 && !appliedPromo) {
-      applyCouponCode(initialCoupon);
+    if (isLoaded && subtotal > 0 && !appliedPromo) {
+      let codeToApply = initialCoupon;
+      if (!codeToApply) {
+        try {
+          codeToApply = localStorage.getItem("icr_ref") || "";
+        } catch {}
+      }
+      if (!codeToApply && typeof document !== "undefined") {
+        const match = document.cookie.match(/(?:^|;\s*)icr_ref=([^;]+)/);
+        if (match) codeToApply = match[1];
+      }
+      if (codeToApply) {
+        applyCouponCode(codeToApply);
+      }
     }
   }, [initialCoupon, isLoaded, subtotal, appliedPromo, applyCouponCode]);
 

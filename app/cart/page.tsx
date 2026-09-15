@@ -57,6 +57,25 @@ export default function CartPage() {
     setExpandedDetails((prev) => ({ ...prev, [id]: !prev[id] }));
   }
 
+  // Auto-apply partner referral code if visitor arrived via partner link
+  useEffect(() => {
+    if (!isLoaded || subtotal <= 0 || appliedPromo) return;
+
+    let refCode: string | null = null;
+    try {
+      refCode = localStorage.getItem("icr_ref");
+    } catch {}
+
+    if (!refCode) {
+      const match = document.cookie.match(/(?:^|;\s*)icr_ref=([^;]+)/);
+      if (match) refCode = match[1];
+    }
+
+    if (refCode) {
+      handleApplyPromoCode(refCode).catch(() => {});
+    }
+  }, [isLoaded, subtotal, appliedPromo]);
+
   async function handleApplyPromoCode(code: string): Promise<boolean> {
     setPromoError("");
     const cleanCode = code.trim().toUpperCase();
