@@ -5,13 +5,11 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const authCookie = request.cookies.get("icr_auth")?.value;
 
-  // Protected routes: account, orders, cart, checkout, customize
+  // Protected routes: account, orders, checkout
   const isProtected =
     pathname.startsWith("/account") ||
     pathname.startsWith("/orders") ||
-    pathname.startsWith("/cart") ||
-    pathname.startsWith("/checkout") ||
-    pathname.startsWith("/customize");
+    pathname.startsWith("/checkout");
 
   if (isProtected) {
     if (!authCookie) {
@@ -39,9 +37,7 @@ export const config = {
   matcher: [
     "/account/:path*",
     "/orders/:path*",
-    "/cart/:path*",
     "/checkout/:path*",
-    "/customize/:path*",
     "/login",
     "/register",
   ],
