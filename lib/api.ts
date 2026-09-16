@@ -259,10 +259,10 @@ export async function apiRequest<T>(
 // ─────────────────────────────────────────────────────────
 
 export const authApi = {
-  async register(phone: string, password: string, name: string) {
+  async register(phone: string, password: string, name: string, email?: string) {
     return apiRequest<{ accessToken: string; refreshToken?: string; user: User }>("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ phone, password, name }),
+      body: JSON.stringify({ phone, password, name, ...(email ? { email } : {}) }),
     });
   },
 
@@ -302,6 +302,29 @@ export const authApi = {
       body: JSON.stringify({ userId }),
     });
   },
+
+  // ── Customer Forgot Password (3-step OTP flow) ────────────────────────────
+
+  async forgotSendOtp(email: string) {
+    return apiRequest<void>("/auth/forgot-password/send-otp", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  async forgotVerifyOtp(email: string, otp: string) {
+    return apiRequest<{ resetToken: string }>("/auth/forgot-password/verify-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, otp }),
+    });
+  },
+
+  async forgotResetPassword(email: string, resetToken: string, newPassword: string) {
+    return apiRequest<void>("/auth/forgot-password/reset", {
+      method: "POST",
+      body: JSON.stringify({ email, resetToken, newPassword }),
+    });
+  },
 };
 
 // ─────────────────────────────────────────────────────────
@@ -315,7 +338,7 @@ export const userApi = {
     });
   },
 
-  async updateProfile(data: { name?: string; phone?: string; avatarUrl?: string }) {
+  async updateProfile(data: { name?: string; email?: string; phone?: string; avatarUrl?: string | null }) {
     return apiRequest<{ user: User }>("/users/me", {
       method: "PUT",
       body: JSON.stringify(data),
