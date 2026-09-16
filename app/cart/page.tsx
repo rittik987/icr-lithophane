@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -22,6 +22,8 @@ export default function CartPage() {
   const [availableCouponsCount, setAvailableCouponsCount] = useState<number | null>(null);
   const [selectedPreviewItem, setSelectedPreviewItem] = useState<CartItem | null>(null);
   const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
+  // Track when user explicitly removes a coupon to prevent auto-reapply
+  const userRemovedCouponRef = useRef(false);
   // Inline "clear cart" confirmation — avoids native window.confirm()
   const [confirmClear, setConfirmClear] = useState(false);
 
@@ -57,24 +59,23 @@ export default function CartPage() {
     setExpandedDetails((prev) => ({ ...prev, [id]: !prev[id] }));
   }
 
-  // Auto-apply partner referral code if visitor arrived via partner link
+  // Auto-apply partner referral code if visitor arrived via partner link.
+  // Only runs once on load — skipped if user has already manually removed a coupon.
   useEffect(() => {
-    if (!isLoaded || subtotal <= 0 || appliedPromo) return;
+    if (!isLoaded || subtotal <= 0 || appliedPromo || userRemovedCouponRef.current) return;
 
     let refCode: string | null = null;
     try {
-      refCode = localStorage.getItem("icr_ref");
+      // sessionStorage is tab-scoped — cleared when the tab closes.
+      // Falls back to nothing if sessionStorage unavailable.
+      refCode = sessionStorage.getItem("icr_ref");
     } catch {}
-
-    if (!refCode) {
-      const match = document.cookie.match(/(?:^|;\s*)icr_ref=([^;]+)/);
-      if (match) refCode = match[1];
-    }
 
     if (refCode) {
       handleApplyPromoCode(refCode).catch(() => {});
     }
-  }, [isLoaded, subtotal, appliedPromo]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, subtotal]);
 
   async function handleApplyPromoCode(code: string): Promise<boolean> {
     setPromoError("");
@@ -107,6 +108,7 @@ export default function CartPage() {
   }
 
   function handleRemovePromo() {
+    userRemovedCouponRef.current = true; // prevent auto-reapply
     setAppliedPromo(null);
     setPromoInput("");
     setPromoError("");

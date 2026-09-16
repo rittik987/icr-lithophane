@@ -20,9 +20,9 @@ interface AuthContextType {
   isLoading: boolean;
   login: (phone: string, password: string) => Promise<{ success: boolean; error?: string }>;
   loginWithGoogle: (idToken: string) => Promise<{ success: boolean; error?: string }>;
-  register: (phone: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
+  register: (phone: string, password: string, name: string, email: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
-  updateProfile: (data: { name?: string; phone?: string; avatarUrl?: string }) => Promise<{ success: boolean; error?: string }>;
+  updateProfile: (data: { name?: string; email?: string; phone?: string; avatarUrl?: string | null }) => Promise<{ success: boolean; error?: string }>;
   refreshUser: () => Promise<void>;
 }
 
@@ -192,8 +192,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { success: false, error: res.error || "Google sign-in failed" };
   }, []);
 
-  const register = useCallback(async (phone: string, password: string, name: string) => {
-    const res = await authApi.register(phone, password, name);
+  const register = useCallback(async (phone: string, password: string, name: string, email: string) => {
+    const res = await authApi.register(phone, password, name, email);
     if (res.success && res.data) {
       setUser(res.data.user);
       setToken(res.data.accessToken);
@@ -220,7 +220,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearStoredAuth();
   }, []);
 
-  const updateProfile = useCallback(async (data: { name?: string; phone?: string; avatarUrl?: string }) => {
+  const updateProfile = useCallback(async (data: { name?: string; email?: string; phone?: string; avatarUrl?: string | null }) => {
     const res = await userApi.updateProfile(data);
     if (res.success && res.data?.user) {
       setUser(res.data.user);

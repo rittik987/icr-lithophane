@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useCallback, useMemo } from "react";
+import { useState, useEffect, Suspense, useCallback, useMemo, useRef } from "react";
 import useSWR from "swr";
 import Link from "next/link";
 import Image from "next/image";
@@ -172,6 +172,8 @@ function CheckoutContent() {
   const [promoError, setPromoError] = useState("");
   const [isCouponDrawerOpen, setIsCouponDrawerOpen] = useState(false);
   const [availableCouponsCount, setAvailableCouponsCount] = useState<number | null>(null);
+  // Track when user explicitly removes a coupon to prevent auto-reapply
+  const userRemovedCouponRef = useRef(false);
 
   const [selectedPaymentModel, setSelectedPaymentModel] = useState<PaymentModel>("FULL_ONLINE");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -311,22 +313,21 @@ function CheckoutContent() {
   );
 
   useEffect(() => {
-    if (isLoaded && subtotal > 0 && !appliedPromo) {
+    // Skip if user manually removed the coupon, or if a coupon is already applied
+    if (isLoaded && subtotal > 0 && !appliedPromo && !userRemovedCouponRef.current) {
       let codeToApply = initialCoupon;
       if (!codeToApply) {
         try {
-          codeToApply = localStorage.getItem("icr_ref") || "";
+          // sessionStorage is tab-scoped — cleared when the tab closes.
+          codeToApply = sessionStorage.getItem("icr_ref") || "";
         } catch {}
-      }
-      if (!codeToApply && typeof document !== "undefined") {
-        const match = document.cookie.match(/(?:^|;\s*)icr_ref=([^;]+)/);
-        if (match) codeToApply = match[1];
       }
       if (codeToApply) {
         applyCouponCode(codeToApply);
       }
     }
-  }, [initialCoupon, isLoaded, subtotal, appliedPromo, applyCouponCode]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialCoupon, isLoaded, subtotal, applyCouponCode]);
 
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -1424,12 +1425,7 @@ function CheckoutContent() {
                   </svg>
                   <span>256-Bit SSL Encrypted Checkout via Razorpay</span>
                 </div>
-                <div className="flex items-center gap-1 text-[#047857] font-semibold">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  <span>100% Replacement Guarantee</span>
-                </div>
+                
               </div>
             </div>
           </div>
@@ -1544,6 +1540,7 @@ function CheckoutContent() {
                     <button
                       type="button"
                       onClick={() => {
+                        userRemovedCouponRef.current = true; // prevent auto-reapply
                         setAppliedPromo(null);
                         setPromoInput("");
                         setPromoError("");
@@ -2155,6 +2152,7 @@ function CheckoutContent() {
           return false;
         }}
         onRemoveCoupon={() => {
+          userRemovedCouponRef.current = true; // prevent auto-reapply
           setAppliedPromo(null);
           setPromoInput("");
           setPromoError("");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import useSWR from "swr";
 import Link from "next/link";
 import Image from "next/image";
@@ -9,7 +9,7 @@ import { ASSETS } from "@/lib/assets";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
-import { userApi, Address } from "@/lib/api";
+import { userApi, uploadApi, Address } from "@/lib/api";
 import { AccountSkeleton, AddressCardSkeleton } from "@/components/Skeleton";
 
 export default function AccountPage() {
@@ -20,10 +20,15 @@ export default function AccountPage() {
 
   const [activeTab, setActiveTab] = useState<"profile" | "addresses" | "saved">("profile");
 
-  // Profile Edit State
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [editName, setEditName] = useState("");
-  const [savingName, setSavingName] = useState(false);
+  // Profile Edit State (Rich modal with prefill)
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [profileName, setProfileName] = useState("");
+  const [profileEmail, setProfileEmail] = useState("");
+  const [profilePhone, setProfilePhone] = useState("");
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // Address State — SWR for automatic cache across route transitions
   const { data: addresses = [], isLoading: loadingAddresses, mutate: mutateAddresses } = useSWR(
@@ -67,33 +72,96 @@ export default function AccountPage() {
     return () => window.removeEventListener("app:pulled-to-refresh", handlePullRefresh);
   }, [mutateAddresses]);
 
-  // Initialize edit name when user loads
-  useEffect(() => {
-    if (user?.name) {
-      setEditName(user.name);
+  function openEditProfileModal() {
+    if (!user) return;
+    setProfileName(user.name || "");
+    setProfileEmail(user.email || "");
+    const rawPhone = user.phone || "";
+    setProfilePhone(rawPhone.startsWith("+91") ? rawPhone.slice(3) : rawPhone);
+    setProfileAvatarUrl(user.avatarUrl || null);
+    setShowEditProfileModal(true);
+  }
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showToast({ title: "Please select an image file", type: "error" });
+      return;
     }
-  }, [user?.name]);
+    if (file.size > 5 * 1024 * 1024) {
+      showToast({ title: "Image must be under 5MB", type: "error" });
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      const res = await uploadApi.uploadFiles([file], "avatars");
+      if (res.success && res.assets?.[0]?.url) {
+        setProfileAvatarUrl(res.assets[0].url);
+        showToast({ title: "Profile photo uploaded", type: "success" });
+      } else {
+        showToast({ title: res.error || "Failed to upload photo", type: "error" });
+      }
+    } catch {
+      showToast({ title: "Failed to upload photo", type: "error" });
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  }
+
+  async function handleSaveProfile(e: React.FormEvent) {
+    e.preventDefault();
+    if (!profileName.trim()) {
+      showToast({ title: "Please enter your full name", type: "error" });
+      return;
+    }
+
+    if (profileEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profileEmail.trim())) {
+      showToast({ title: "Please enter a valid email address", type: "error" });
+      return;
+    }
+
+    const cleanPhone = profilePhone.replace(/\D/g, "");
+    if (cleanPhone && cleanPhone.length < 10) {
+      showToast({ title: "Mobile number must be 10 digits", type: "error" });
+      return;
+    }
+
+    setSavingProfile(true);
+    try {
+      const formattedPhone = cleanPhone
+        ? cleanPhone.startsWith("91") && cleanPhone.length === 12
+          ? `+${cleanPhone}`
+          : `+91${cleanPhone}`
+        : undefined;
+
+      const res = await updateProfile({
+        name: profileName.trim(),
+        email: profileEmail.trim() ? profileEmail.trim().toLowerCase() : undefined,
+        phone: formattedPhone,
+        avatarUrl: profileAvatarUrl,
+      });
+
+      if (res.success) {
+        setShowEditProfileModal(false);
+        showToast({ title: "Profile updated successfully", type: "success" });
+      } else {
+        showToast({ title: res.error || "Failed to update profile", type: "error" });
+      }
+    } catch {
+      showToast({ title: "Unable to update profile", type: "error" });
+    } finally {
+      setSavingProfile(false);
+    }
+  }
 
   async function handleLogout() {
     await logout();
     showToast({ title: "Signed out successfully", type: "info" });
     router.push("/login");
-  }
-
-  async function handleSaveName(e: React.FormEvent) {
-    e.preventDefault();
-    if (!editName.trim()) return;
-
-    setSavingName(true);
-    const res = await updateProfile({ name: editName.trim() });
-    setSavingName(false);
-
-    if (res.success) {
-      setIsEditingName(false);
-      showToast({ title: "Profile updated successfully", type: "success" });
-    } else {
-      showToast({ title: res.error || "Failed to update profile", type: "error" });
-    }
   }
 
   async function handleAddAddress(e: React.FormEvent) {
@@ -235,51 +303,71 @@ export default function AccountPage() {
 
       {/* Main Content */}
       <main className="max-w-md sm:max-w-xl mx-auto px-4 sm:px-6 pt-16 sm:pt-20 w-full flex-1">
-        {/* Personal Profile Summary */}
-        <div className="flex items-center justify-between mb-5 pt-1">
-          <div className="flex items-center gap-3.5">
-            {/* Warm circular monogram */}
-            <div className="w-12 h-12 rounded-full bg-[#f2e7d8] border border-[#dfd2c0] text-[#a55214] flex items-center justify-center text-sm font-bold font-serif shadow-2xs shrink-0 tracking-wider">
-              {initials}
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-bold text-[#2e1e12] font-serif leading-tight">
-                {user.name}
-              </h1>
-              <div className="flex items-center gap-1.5 text-xs text-[#8c786a] mt-0.5">
-                <span>{user.phone || "No phone linked"}</span>
-                <span className="text-[#d5c5b2]">·</span>
-                <button
-                  type="button"
-                  onClick={() => setIsEditingName(!isEditingName)}
-                  className="text-[#c96a1f] hover:text-[#9e4c10] font-semibold transition-colors cursor-pointer"
-                >
-                  {isEditingName ? "Cancel" : "Edit"}
-                </button>
+        {/* Personal Profile Summary Card */}
+        <div className="bg-white border border-[#e8dfd2] rounded-2xl p-4 sm:p-5 shadow-xs mb-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3.5 min-w-0">
+              {/* Circular Avatar or Monogram */}
+              {user.avatarUrl ? (
+                <div className="relative w-13 h-13 sm:w-14 sm:h-14 rounded-full overflow-hidden border-2 border-[#dfd2c0] shadow-2xs shrink-0">
+                  <Image
+                    src={user.avatarUrl}
+                    alt={user.name || "Profile"}
+                    fill
+                    className="object-cover"
+                    sizes="56px"
+                  />
+                </div>
+              ) : (
+                <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-[#f2e7d8] border-2 border-[#dfd2c0] text-[#a55214] flex items-center justify-center text-sm sm:text-base font-bold font-serif shadow-2xs shrink-0 tracking-wider">
+                  {initials}
+                </div>
+              )}
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h1 className="text-base sm:text-lg font-bold text-[#2e1e12] font-serif leading-tight truncate">
+                    {user.name}
+                  </h1>
+                </div>
+                <div className="flex flex-col gap-0.5 text-xs text-[#8c786a] mt-1">
+                  {user.email && (
+                    <div className="flex items-center gap-1.5 truncate">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#a89989] shrink-0">
+                        <rect width="20" height="16" x="2" y="4" rx="2" />
+                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                      </svg>
+                      <span className="truncate">{user.email}</span>
+                    </div>
+                  )}
+                  {user.phone && (
+                    <div className="flex items-center gap-1.5">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#a89989] shrink-0">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                      </svg>
+                      <span>{user.phone}</span>
+                    </div>
+                  )}
+                  {!user.email && !user.phone && (
+                    <span className="text-[#a89989]">No contact details linked</span>
+                  )}
+                </div>
               </div>
             </div>
+
+            {/* Edit Profile Button */}
+            <button
+              type="button"
+              onClick={openEditProfileModal}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl border border-[#e5ddd0] bg-[#faf7f2] hover:bg-[#f2ebdc] hover:border-[#c96a1f] text-xs font-semibold text-[#2e1e12] transition-all shadow-2xs cursor-pointer shrink-0"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#c96a1f]">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+              </svg>
+              <span>Edit Profile</span>
+            </button>
           </div>
         </div>
-
-        {/* Inline Edit Form */}
-        {isEditingName && (
-          <form onSubmit={handleSaveName} className="mb-5 p-3 rounded-2xl bg-white border border-[#e8dfd2] shadow-xs flex items-center gap-2">
-            <input
-              type="text"
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              placeholder="Enter your full name"
-              className="flex-1 px-3 py-1.5 rounded-xl border border-[#e5ddd0] bg-[#faf7f2] text-xs font-medium text-[#2e1e12] outline-none focus:border-[#e07a28] focus:bg-white"
-            />
-            <button
-              type="submit"
-              disabled={savingName}
-              className="px-3 py-1.5 bg-[#e07a28] hover:bg-[#c96a1f] text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer disabled:opacity-50 shrink-0"
-            >
-              {savingName ? "Saving..." : "Save"}
-            </button>
-          </form>
-        )}
 
         {/* Account Navigation Rows (Boutique list style — no border fatigue) */}
         <div className="bg-white border border-[#e8dfd2] rounded-2xl overflow-hidden shadow-xs divide-y divide-[#f3ede3] mb-5">
@@ -676,6 +764,195 @@ export default function AccountPage() {
                   className="w-1/2 py-2.5 bg-[#e07a28] hover:bg-[#c96a1f] text-white text-xs font-bold uppercase tracking-wider rounded-lg sm:rounded-xl transition-colors cursor-pointer"
                 >
                   {savingAddress ? "Saving..." : "Save Address"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Edit Profile Modal */}
+      {showEditProfileModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white border border-[#e5ddd0] rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-md w-full shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-[#f3ede3] mb-4">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-[#2e1e12] font-serif">Edit Profile</h3>
+                <p className="text-[11px] text-[#8c786a]">Update your personal details and preferences</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditProfileModal(false)}
+                className="w-8 h-8 rounded-full bg-[#faf7f2] text-[#8c786a] hover:text-[#2e1e12] hover:bg-[#ede4d6] flex items-center justify-center p-1 cursor-pointer transition-colors"
+                aria-label="Close modal"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              {/* Avatar Upload Preview */}
+              <div className="flex items-center gap-4 p-3 rounded-2xl bg-[#faf7f2] border border-[#ede3d4]">
+                <div className="relative">
+                  {profileAvatarUrl ? (
+                    <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-[#dfd2c0] shadow-xs">
+                      <Image
+                        src={profileAvatarUrl}
+                        alt="Preview"
+                        fill
+                        className="object-cover"
+                        sizes="64px"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-[#ede1d1] border-2 border-[#dfd2c0] text-[#a55214] flex items-center justify-center text-lg font-bold font-serif shadow-xs tracking-wider">
+                      {initials}
+                    </div>
+                  )}
+                  {uploadingAvatar && (
+                    <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center text-white">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-bold text-[#2e1e12] mb-0.5">Profile Photo</div>
+                  <div className="text-[10px] text-[#8c786a] mb-2">JPG, PNG or WebP up to 5MB</div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      ref={avatarInputRef}
+                      onChange={handleAvatarChange}
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      disabled={uploadingAvatar}
+                      onClick={() => avatarInputRef.current?.click()}
+                      className="px-2.5 py-1 text-[11px] font-semibold bg-white border border-[#dfd2c0] hover:border-[#c96a1f] text-[#2e1e12] rounded-lg transition-colors cursor-pointer shadow-2xs disabled:opacity-50"
+                    >
+                      {profileAvatarUrl ? "Change Photo" : "Upload Photo"}
+                    </button>
+                    {profileAvatarUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setProfileAvatarUrl(null)}
+                        className="px-2 py-1 text-[11px] font-medium text-[#dc2626] hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Full Name */}
+              <div>
+                <label className="block text-[11px] font-bold text-[#2e1e12] uppercase tracking-wider mb-1">
+                  Full Name <span className="text-[#dc2626]">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#a89989]">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={profileName}
+                    onChange={(e) => setProfileName(e.target.value)}
+                    placeholder="Your Full Name"
+                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-[#e5ddd0] bg-[#faf7f2] text-xs font-medium text-[#2e1e12] outline-none focus:border-[#e07a28] focus:bg-white transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Email Address */}
+              <div>
+                <label className="block text-[11px] font-bold text-[#2e1e12] uppercase tracking-wider mb-1">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#a89989]">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect width="20" height="16" x="2" y="4" rx="2" />
+                      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                    </svg>
+                  </div>
+                  <input
+                    type="email"
+                    value={profileEmail}
+                    onChange={(e) => setProfileEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-[#e5ddd0] bg-[#faf7f2] text-xs font-medium text-[#2e1e12] outline-none focus:border-[#e07a28] focus:bg-white transition-colors"
+                  />
+                </div>
+                <p className="text-[10px] text-[#8c786a] mt-1">Used for order receipts, tracking notifications, and account recovery</p>
+              </div>
+
+              {/* Phone Number */}
+              <div>
+                <label className="block text-[11px] font-bold text-[#2e1e12] uppercase tracking-wider mb-1">
+                  Mobile Number
+                </label>
+                <div className="relative flex rounded-xl border border-[#e5ddd0] bg-[#faf7f2] focus-within:border-[#e07a28] focus-within:bg-white transition-colors overflow-hidden">
+                  <div className="flex items-center gap-1 px-3 bg-[#f2ebdc] border-r border-[#e5ddd0] text-xs font-semibold text-[#6e5c50] select-none shrink-0">
+                    <span>🇮🇳</span>
+                    <span>+91</span>
+                  </div>
+                  <input
+                    type="tel"
+                    maxLength={10}
+                    value={profilePhone}
+                    onChange={(e) => setProfilePhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    placeholder="98765 43210"
+                    className="flex-1 px-3 py-2 bg-transparent text-xs font-medium text-[#2e1e12] outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Password & Security Quick Link */}
+              <div className="p-3 rounded-xl bg-[#faf7f2] border border-[#ede3d4] flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-semibold text-[#2e1e12]">Account Security</div>
+                  <div className="text-[10px] text-[#8c786a]">Need to reset or change your password?</div>
+                </div>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-semibold text-[#c96a1f] hover:text-[#9e4c10] transition-colors"
+                >
+                  Reset Password →
+                </Link>
+              </div>
+
+              {/* Modal Action Buttons */}
+              <div className="flex gap-2 pt-2 border-t border-[#f3ede3]">
+                <button
+                  type="button"
+                  onClick={() => setShowEditProfileModal(false)}
+                  className="w-1/2 py-2.5 bg-[#faf7f2] hover:bg-[#f2ebdc] text-[#2e1e12] text-xs font-bold uppercase tracking-wider rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingProfile || uploadingAvatar}
+                  className="w-1/2 py-2.5 bg-[#e07a28] hover:bg-[#c96a1f] text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {savingProfile ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
                 </button>
               </div>
             </form>

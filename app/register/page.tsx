@@ -1,13 +1,10 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
-
-
-
 
 function GoogleIcon({ className = "w-4 h-4" }: { className?: string }) {
   return (
@@ -40,6 +37,7 @@ function RegisterForm() {
   const { showToast } = useToast();
 
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -51,6 +49,8 @@ function RegisterForm() {
   const [error, setError] = useState<string | null>(null);
   const [gsiReady, setGsiReady] = useState(false);
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+  const googleBtnRef = useRef<HTMLDivElement>(null);
+  const credentialHandlerRef = useRef<((response: { credential: string }) => Promise<void>) | null>(null);
 
   // Auth guard
   useEffect(() => {
@@ -59,30 +59,72 @@ function RegisterForm() {
     }
   }, [isLoading, user, redirect]);
 
-  // Load Google GSI script
+  // Keep credential handler ref up to date
+  const handleGoogleCredential = useCallback(async (response: { credential: string }) => {
+    setGoogleLoading(true);
+    setError(null);
+    try {
+      const res = await loginWithGoogle(response.credential);
+      if (res.success) {
+        showToast({ title: "Welcome!", message: "Signed in with Google", type: "success" });
+        window.location.replace(redirect);
+      } else {
+        setError(res.error || "Google sign-in failed. Please try again.");
+        setGoogleLoading(false);
+      }
+    } catch {
+      setError("Unable to connect to server. Please try again.");
+      setGoogleLoading(false);
+    }
+  }, [loginWithGoogle, redirect, showToast]);
+
+  useEffect(() => {
+    credentialHandlerRef.current = handleGoogleCredential;
+  }, [handleGoogleCredential]);
+
+  // Load Google GSI script and render official button
   useEffect(() => {
     if (!googleClientId) return;
+
+    function initAndRenderButton() {
+      if (!window.google?.accounts?.id || !googleBtnRef.current) return;
+
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: (response: { credential: string }) => {
+          credentialHandlerRef.current?.(response);
+        },
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
+
+      // renderButton renders an official Google iframe button — always opens
+      // the account chooser popup on click, bypassing FedCM restrictions.
+      window.google.accounts.id.renderButton(googleBtnRef.current, {
+        theme: "outline",
+        size: "large",
+        shape: "rectangular",
+        text: "signup_with",
+        width: googleBtnRef.current.offsetWidth || 360,
+      });
+
+      setGsiReady(true);
+    }
+
     const existingScript = document.getElementById("google-gsi-script");
     if (existingScript) {
-      if (window.google?.accounts) setGsiReady(true);
+      initAndRenderButton();
       return;
     }
+
     const script = document.createElement("script");
     script.id = "google-gsi-script";
     script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
     script.defer = true;
-    script.onload = () => {
-      window.google?.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: handleGoogleCredential,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      });
-      setGsiReady(true);
-    };
+    script.onload = initAndRenderButton;
     document.head.appendChild(script);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [googleClientId]);
 
   function handlePhoneChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -117,6 +159,11 @@ function RegisterForm() {
       return;
     }
 
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
     if (phone.length < 10) {
       setError("Please enter a valid 10-digit mobile number");
       return;
@@ -140,7 +187,7 @@ function RegisterForm() {
     setLoading(true);
     try {
       const formattedPhone = phone.startsWith("+91") ? phone : `+91${phone}`;
-      const res = await register(formattedPhone, password, name.trim());
+      const res = await register(formattedPhone, password, name.trim(), email.trim().toLowerCase());
 
       if (res.success) {
         showToast({
@@ -159,42 +206,6 @@ function RegisterForm() {
       setError("Unable to connect to server. Please check your connection.");
       setLoading(false);
     }
-  }
-
-  async function handleGoogleCredential(response: { credential: string }) {
-    setGoogleLoading(true);
-    setError(null);
-    try {
-      const res = await loginWithGoogle(response.credential);
-      if (res.success) {
-        showToast({ title: "Welcome!", message: "Signed in with Google", type: "success" });
-        window.location.replace(redirect);
-      } else {
-        setError(res.error || "Google sign-in failed. Please try again.");
-        setGoogleLoading(false);
-      }
-    } catch {
-      setError("Unable to connect to server. Please try again.");
-      setGoogleLoading(false);
-    }
-  }
-
-  function handleGoogleButtonClick() {
-    if (!googleClientId) {
-      showToast({ title: "Not configured", message: "Google sign-in is not configured", type: "error" });
-      return;
-    }
-    if (!gsiReady || !window.google?.accounts) {
-      showToast({ title: "Loading…", message: "Google is still loading, please try again", type: "info" });
-      return;
-    }
-    window.google.accounts.id.initialize({
-      client_id: googleClientId,
-      callback: handleGoogleCredential,
-      auto_select: false,
-      cancel_on_tap_outside: true,
-    });
-    window.google.accounts.id.prompt();
   }
 
   return (
@@ -233,29 +244,36 @@ function RegisterForm() {
             </p>
           </div>
 
-          {/* Google Sign-In Button */}
-          <button
-            id="google-register-btn"
-            type="button"
-            onClick={handleGoogleButtonClick}
-            disabled={googleLoading || loading}
-            className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-2xl bg-white hover:bg-[#FAF7F2] border border-[#E2D8C9] hover:border-[#D5C7B3] text-xs font-semibold text-[#2E1E12] transition-all shadow-2xs cursor-pointer active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {googleLoading ? (
-              <>
-                <svg className="animate-spin h-4 w-4 text-[#2E1E12]" fill="none" viewBox="0 0 24 24">
+          {/* Google Sign-Up Button — uses renderButton() (official iframe) which always opens
+               the account chooser popup. The old prompt() / One Tap API is silently suppressed
+               in Chrome FedCM mode, causing the "click has no effect" bug. */}
+          <div className="relative w-full" id="google-register-btn-wrapper">
+            <div
+              ref={googleBtnRef}
+              id="google-register-btn-container"
+              className="w-full overflow-hidden rounded-2xl"
+              style={{ minHeight: 44, opacity: gsiReady ? 1 : 0, transition: "opacity 0.2s" }}
+            />
+
+            {/* Loading overlay — shown after account selected while backend verifies */}
+            {googleLoading && (
+              <div className="absolute inset-0 flex items-center justify-center gap-2.5 rounded-2xl bg-white border border-[#E2D8C9] z-10">
+                <svg className="animate-spin h-4 w-4 text-[#D96B27]" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                <span>Signing in with Google...</span>
-              </>
-            ) : (
-              <>
-                <GoogleIcon className="w-4 h-4 shrink-0" />
-                <span>Sign up with Google</span>
-              </>
+                <span className="text-xs font-semibold text-[#2E1E12]">Signing in with Google...</span>
+              </div>
             )}
-          </button>
+
+            {/* Skeleton while GSI script loads */}
+            {!gsiReady && !googleLoading && (
+              <div className="absolute inset-0 flex items-center justify-center gap-3 rounded-2xl bg-white border border-[#E2D8C9] animate-pulse">
+                <div className="w-4 h-4 rounded-full bg-[#E2D8C9]" />
+                <div className="h-3 w-32 rounded bg-[#E2D8C9]" />
+              </div>
+            )}
+          </div>
 
           {/* Minimalist Divider */}
           <div className="relative my-5 flex items-center justify-center">
@@ -296,6 +314,26 @@ function RegisterForm() {
                   className="w-full px-3.5 py-3 text-sm font-medium text-[#2E1E12] placeholder-[#B8A798] bg-transparent outline-none tracking-wide"
                 />
               </div>
+            </div>
+
+            {/* Email */}
+            <div>
+              <label htmlFor="reg-email" className="block text-[11px] font-bold text-[#6E5C50] uppercase tracking-wider mb-1.5">
+                Email Address
+              </label>
+              <div className="relative flex items-center rounded-2xl border border-[#E2D8C9] bg-[#FAF8F5] focus-within:border-[#D96B27] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#D96B27]/10 transition-all overflow-hidden">
+                <input
+                  id="reg-email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  className="w-full px-3.5 py-3 text-sm font-medium text-[#2E1E12] placeholder-[#B8A798] bg-transparent outline-none tracking-wide"
+                />
+              </div>
+              <p className="mt-1 text-[10px] text-[#9A8778] px-1">Used for order updates &amp; account recovery</p>
             </div>
 
             {/* Phone */}

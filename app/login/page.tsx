@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
-
-
 
 
 function GoogleIcon({ className = "w-4 h-4" }: { className?: string }) {
@@ -35,6 +33,8 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [gsiReady, setGsiReady] = useState(false);
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+  const googleBtnRef = useRef<HTMLDivElement>(null);
+  const credentialHandlerRef = useRef<((response: { credential: string }) => Promise<void>) | null>(null);
 
   // Auth guard
   useEffect(() => {
@@ -43,35 +43,8 @@ function LoginForm() {
     }
   }, [isLoading, user, redirect]);
 
-  // Load Google GSI script and initialise
-  useEffect(() => {
-    if (!googleClientId) return;
-
-    const existingScript = document.getElementById("google-gsi-script");
-    if (existingScript) {
-      if (window.google?.accounts) setGsiReady(true);
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.id = "google-gsi-script";
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      window.google?.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: handleGoogleCredential,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      });
-      setGsiReady(true);
-    };
-    document.head.appendChild(script);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [googleClientId]);
-
-  async function handleGoogleCredential(response: { credential: string }) {
+  // Keep credential handler ref up to date so it can access current state
+  const handleGoogleCredential = useCallback(async (response: { credential: string }) => {
     setGoogleLoading(true);
     setError(null);
     try {
@@ -87,26 +60,59 @@ function LoginForm() {
       setError("Unable to connect to server. Please try again.");
       setGoogleLoading(false);
     }
-  }
+  }, [loginWithGoogle, redirect, showToast]);
 
-  function handleGoogleButtonClick() {
-    if (!googleClientId) {
-      showToast({ title: "Not configured", message: "Google sign-in is not configured", type: "error" });
+  useEffect(() => {
+    credentialHandlerRef.current = handleGoogleCredential;
+  }, [handleGoogleCredential]);
+
+  // Load Google GSI script and render official button
+  useEffect(() => {
+    if (!googleClientId) return;
+
+    function initAndRenderButton() {
+      if (!window.google?.accounts?.id || !googleBtnRef.current) return;
+
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        // Use a stable wrapper so we always call the latest handler
+        callback: (response: { credential: string }) => {
+          credentialHandlerRef.current?.(response);
+        },
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
+
+      // renderButton renders an official Google iframe button — this always opens
+      // the account chooser popup on click, even in FedCM/Chrome 2024+ mode.
+      // The custom prompt() API is for One Tap only and is silently suppressed.
+      window.google.accounts.id.renderButton(googleBtnRef.current, {
+        theme: "outline",
+        size: "large",
+        shape: "rectangular",
+        text: "continue_with",
+        width: googleBtnRef.current.offsetWidth || 360,
+      });
+
+      setGsiReady(true);
+    }
+
+    const existingScript = document.getElementById("google-gsi-script");
+    if (existingScript) {
+      // Script already loaded (e.g. navigating back)
+      initAndRenderButton();
       return;
     }
-    if (!gsiReady || !window.google?.accounts) {
-      showToast({ title: "Loading…", message: "Google is still loading, please try again", type: "info" });
-      return;
-    }
-    // Re-init with latest callback reference then prompt
-    window.google.accounts.id.initialize({
-      client_id: googleClientId,
-      callback: handleGoogleCredential,
-      auto_select: false,
-      cancel_on_tap_outside: true,
-    });
-    window.google.accounts.id.prompt();
-  }
+
+    const script = document.createElement("script");
+    script.id = "google-gsi-script";
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = initAndRenderButton;
+    document.head.appendChild(script);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [googleClientId]);
 
   function handlePhoneChange(e: React.ChangeEvent<HTMLInputElement>) {
     const raw = e.target.value.replace(/\D/g, "");
@@ -180,29 +186,37 @@ function LoginForm() {
             </p>
           </div>
 
-          {/* Google Sign-In Button */}
-          <button
-            id="google-login-btn"
-            type="button"
-            onClick={handleGoogleButtonClick}
-            disabled={googleLoading || loading}
-            className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-2xl bg-white hover:bg-[#FAF7F2] border border-[#E2D8C9] hover:border-[#D5C7B3] text-xs font-semibold text-[#2E1E12] transition-all shadow-2xs cursor-pointer active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {googleLoading ? (
-              <>
-                <svg className="animate-spin h-4 w-4 text-[#2E1E12]" fill="none" viewBox="0 0 24 24">
+          {/* Google Sign-In Button — uses renderButton() (official iframe) which always opens
+               the account chooser popup. The old prompt() / One Tap API is silently suppressed
+               in Chrome FedCM mode, causing the "click has no effect" bug. */}
+          <div className="relative w-full" id="google-login-btn-wrapper">
+            {/* Actual Google rendered button — always visible but may be hidden by loading overlay */}
+            <div
+              ref={googleBtnRef}
+              id="google-login-btn-container"
+              className="w-full overflow-hidden rounded-2xl"
+              style={{ minHeight: 44, opacity: gsiReady ? 1 : 0, transition: "opacity 0.2s" }}
+            />
+
+            {/* Loading overlay — shown after account selected while backend verifies */}
+            {googleLoading && (
+              <div className="absolute inset-0 flex items-center justify-center gap-2.5 rounded-2xl bg-white border border-[#E2D8C9] z-10">
+                <svg className="animate-spin h-4 w-4 text-[#D96B27]" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                <span>Signing in with Google...</span>
-              </>
-            ) : (
-              <>
-                <GoogleIcon className="w-4 h-4 shrink-0" />
-                <span>Continue with Google</span>
-              </>
+                <span className="text-xs font-semibold text-[#2E1E12]">Signing in with Google...</span>
+              </div>
             )}
-          </button>
+
+            {/* Skeleton while GSI script loads */}
+            {!gsiReady && !googleLoading && (
+              <div className="absolute inset-0 flex items-center justify-center gap-3 rounded-2xl bg-white border border-[#E2D8C9] animate-pulse">
+                <div className="w-4 h-4 rounded-full bg-[#E2D8C9]" />
+                <div className="h-3 w-32 rounded bg-[#E2D8C9]" />
+              </div>
+            )}
+          </div>
 
           {/* Divider */}
           <div className="relative my-5 flex items-center justify-center">
@@ -255,14 +269,12 @@ function LoginForm() {
                 <label htmlFor="password-input" className="block text-[11px] font-bold text-[#6E5C50] uppercase tracking-wider">
                   Password
                 </label>
-                <a
-                  href="https://wa.me/919035765038?text=Hello%20ICR%20Studio%2C%20I%20need%20help%20with%20my%20password."
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  href="/forgot-password"
                   className="text-[11px] font-medium text-[#D96B27] hover:underline"
                 >
-                  Forgot?
-                </a>
+                  Forgot password?
+                </Link>
               </div>
               <div className="relative flex items-center rounded-2xl border border-[#E2D8C9] bg-[#FAF8F5] focus-within:border-[#D96B27] focus-within:bg-white focus-within:ring-2 focus-within:ring-[#D96B27]/10 transition-all overflow-hidden">
                 <input
