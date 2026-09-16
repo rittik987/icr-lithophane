@@ -207,7 +207,7 @@ export default function WriteReviewModal({
               required
               value={quote}
               onChange={(e) => setQuote(e.target.value)}
-              placeholder="How did the 3D lithophane look when lit up? How was the walnut finish and packaging?"
+              placeholder="How did the 3D lithophane look when lit up? How was the wooden finish and packaging?"
               className="bg-white border border-[#e5ddd0] rounded-xl p-3 text-xs text-[#2e1e12] focus:outline-none focus:border-[#e07a28]"
             />
           </div>

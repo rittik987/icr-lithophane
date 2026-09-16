@@ -87,43 +87,28 @@ export default function PricingPolicyPage() {
               2. Standard Product Price Schedule
             </h2>
             <p>
-              Each item is custom manufactured upon order. Below is our standard pricing structure for our core bespoke lithophane collections:
+              We currently offer our signature handcrafted lithophane lamp in a single standard size. Below is our current pricing:
             </p>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border border-[#e5ddd0] rounded-xl overflow-hidden">
                 <thead className="bg-[#faf7f2] text-[#2e1e12] font-semibold border-b border-[#e5ddd0]">
                   <tr>
-                    <th className="p-3">Product Category</th>
+                    <th className="p-3">Product</th>
                     <th className="p-3">Specifications</th>
                     <th className="p-3 text-right">Price (INR)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#f2ebdc]">
                   <tr>
-                    <td className="p-3 font-medium text-[#2e1e12]">Classic Lithophane Lamp</td>
-                    <td className="p-3 text-[#6e5c50]">Solid walnut wood base, warm LED, custom 3D curved panel</td>
-                    <td className="p-3 text-right font-bold text-[#2e1e12]">₹1,499</td>
-                  </tr>
-                  <tr>
-                    <td className="p-3 font-medium text-[#2e1e12]">Heart Keepsake Lamp</td>
-                    <td className="p-3 text-[#6e5c50]">Heart-shaped carved walnut frame, personalized engraved text</td>
-                    <td className="p-3 text-right font-bold text-[#2e1e12]">₹1,699</td>
-                  </tr>
-                  <tr>
-                    <td className="p-3 font-medium text-[#2e1e12]">Rotating 360° Panoramic Lamp</td>
-                    <td className="p-3 text-[#6e5c50]">Multi-photo motorized rotating walnut base, USB-C powered</td>
-                    <td className="p-3 text-right font-bold text-[#2e1e12]">₹1,999</td>
-                  </tr>
-                  <tr>
-                    <td className="p-3 font-medium text-[#2e1e12]">Mini Pocket Keepsake Lithophane</td>
-                    <td className="p-3 text-[#6e5c50]">Compact desktop display stand with micro ambient light</td>
-                    <td className="p-3 text-right font-bold text-[#2e1e12]">₹999</td>
+                    <td className="p-3 font-medium text-[#2e1e12]">Personalised Lithophane Lamp</td>
+                    <td className="p-3 text-[#6e5c50]">Wooden frame (8&times;6&rdquo;), warm 2400K LED, custom 3D-printed lithophane panel, DC power adapter &amp; cable, gift-ready packaging</td>
+                    <td className="p-3 text-right font-bold text-[#2e1e12]">₹2,199</td>
                   </tr>
                 </tbody>
               </table>
             </div>
             <p className="text-[11px] text-[#8f7c6e]">
-              * Custom laser text engraving on the wooden base is included free of charge during promotional periods.
+              * All prices are inclusive of GST. Free shipping on all prepaid orders.
             </p>
           </section>
 

@@ -22,7 +22,7 @@ export default function PriceBlock({ product }: PriceBlockProps) {
       ? Math.round(product.sellingPrice / 100)
       : 2999;
   const mrp =
-    product?.mrp !== undefined ? Math.round(product.mrp / 100) : 4999;
+    product?.mrp !== undefined ? Math.round(product.mrp / 100) : 2199;
 
   const discountPercent =
     mrp > sellingPrice && mrp > 0
@@ -38,18 +38,14 @@ export default function PriceBlock({ product }: PriceBlockProps) {
     product?.whatsIncluded && product.whatsIncluded.length > 0
       ? product.whatsIncluded
       : [
-          "Custom lithophane in solid walnut frame",
-          "USB-C cable & power adapter",
+          "Custom lithophane in wooden frame",
+          "DC power adapter & cable",
           "Gift-ready packaging",
           "Free pan-India delivery",
         ];
 
   function handleOrderClick() {
-    if (!user) {
-      router.push("/login?redirect=/customize");
-    } else {
-      router.push("/customize");
-    }
+    router.push("/customize");
   }
 
   return (
@@ -131,7 +127,7 @@ export default function PriceBlock({ product }: PriceBlockProps) {
           />
         </div>
         <p className="text-[#6e5c50] text-[11px] font-medium text-center leading-tight font-sans">
-          100% Quality Guarantee  • Cash on Delivery Available
+          100% Quality Guarantee • Cash on Delivery Available
         </p>
       </div>
     </div>

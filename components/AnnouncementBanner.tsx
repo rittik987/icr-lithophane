@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 
 const ANNOUNCEMENTS = [
   "Free Pan-India Delivery (5–7 Days) • Custom Handcrafted 8×6\" Frame Included",
-  "Limited Time: 40% OFF • Save ₹2,000 on Every Order",
+  "Limited Time Offer • Save ₹2,000 on Your Order Today",
   "Cash on Delivery Available • 100% Quality Guarantee",
   "850+ Happy Customers • 4.9 Rating Across India",
 ];

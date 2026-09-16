@@ -16,7 +16,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="text-xs text-[#6e5c50] leading-relaxed">
-              Artisanal 3D-printed lithophane night lamps and bespoke keepsake lighting, crafted with natural solid walnut frames and warm ambient LEDs in Bangalore, India.
+              Artisanal 3D-printed lithophane night lamps and bespoke keepsake lighting, crafted with wooden frames and warm ambient LEDs in Bangalore, India.
             </p>
             <div className="flex items-center gap-2 mt-1 text-[11px] font-medium text-[#c96a1f]">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -54,7 +54,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="/about" className="hover:text-[#e07a28] transition-colors">
-                  About us
+                  About Us
                 </Link>
               </li>
             </ul>
@@ -131,7 +131,7 @@ export default function Footer() {
         <div className="border-t border-[#e5ddd0] pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <div className="flex items-center gap-2 text-xs text-[#6e5c50]">
             <span className="inline-block w-2 h-2 rounded-full bg-[#1e7234]"></span>
-            <span>100% Secure Payments powered by <strong>Razorpay</strong> (UPI, Cards, NetBanking)</span>
+            <span>100% Secure Payments powered by <strong>Razorpay</strong> (UPI, Cards, Net Banking)</span>
           </div>
 
           <p className="text-[11px] text-[#8f7c6e] tracking-wider uppercase">

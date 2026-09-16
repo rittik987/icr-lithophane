@@ -90,7 +90,7 @@ export default function ShippingPolicyPage() {
                   2. Assembly &amp; Wood Curing
                 </span>
                 <p className="text-xs text-[#6e5c50]">
-                  Solid walnut wood base hand-sanding, LED wiring installation, and quality testing.
+                  Wooden frame hand-finishing, LED wiring installation, and quality testing.
                 </p>
               </div>
             </div>

@@ -62,16 +62,35 @@ export default function MediaGalleryDesktop({ className = "", slides }: MediaGal
                 className="relative shrink-0 w-full"
                 style={{ paddingBottom: "75%" /* 4:3 */ }}
               >
-                <Image
-                  src={slide.src}
-                  alt={slide.alt}
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 650px"
-                  className="object-cover"
-                  priority={index <= 1}
-                  loading={index <= 1 ? "eager" : "lazy"}
-                  unoptimized={slide.src.startsWith("data:") || slide.src.endsWith(".svg") || slide.src.includes("figma.com")}
-                />
+                {slide.isVideo ? (
+                  <video
+                    src={slide.src}
+                    poster={slide.posterUrl}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload="metadata"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : (
+                  <Image
+                    src={slide.src}
+                    alt={slide.alt}
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 650px"
+                    className="object-cover"
+                    priority={index <= 1}
+                    loading={index <= 1 ? "eager" : "lazy"}
+                    unoptimized={
+                      slide.isGif ||
+                      slide.src.includes(".gif") ||
+                      slide.src.startsWith("data:") ||
+                      slide.src.endsWith(".svg") ||
+                      slide.src.includes("figma.com")
+                    }
+                  />
+                )}
               </div>
             ))}
           </div>
@@ -126,14 +145,32 @@ export default function MediaGalleryDesktop({ className = "", slides }: MediaGal
             style={{ aspectRatio: "4/3" }}
           >
             <Image
-              src={slide.src}
+              src={slide.isVideo && slide.posterUrl ? slide.posterUrl : slide.src}
               alt={slide.alt}
               fill
               sizes="150px"
               className="object-cover"
               loading="eager"
-              unoptimized={slide.src.startsWith("data:") || slide.src.endsWith(".svg") || slide.src.includes("figma.com")}
+              unoptimized={
+                slide.isGif ||
+                slide.src.includes(".gif") ||
+                slide.src.startsWith("data:") ||
+                slide.src.endsWith(".svg") ||
+                slide.src.includes("figma.com")
+              }
             />
+            {slide.isVideo && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/25 pointer-events-none">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </div>
+            )}
+            {slide.isGif && (
+              <span className="absolute bottom-1 right-1 px-1 py-0.2 bg-amber-600/90 text-white font-bold text-[9px] rounded font-mono pointer-events-none">
+                GIF
+              </span>
+            )}
           </button>
         ))}
       </div>

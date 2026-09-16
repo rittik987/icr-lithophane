@@ -281,6 +281,13 @@ export const authApi = {
     });
   },
 
+  async googleAuth(idToken: string) {
+    return apiRequest<{ accessToken: string; refreshToken?: string; user: User }>("/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ idToken }),
+    });
+  },
+
   async logout() {
     const userStr = typeof window !== "undefined" ? localStorage.getItem("icr_user") : null;
     let userId: string | undefined;
@@ -495,6 +502,7 @@ export interface ServerOrder {
     rating: number;
     comment: string;
     title?: string | null;
+    mediaUrls?: Array<{ url: string; type?: string; publicId?: string }>;
   }[];
   notes?: string | null;
   createdAt: string;
@@ -637,6 +645,7 @@ export const orderApi = {
       title?: string;
       reviewerName?: string;
       location?: string;
+      mediaUrls?: Array<{ url: string; type?: string; publicId?: string }>;
     }
   ) {
     return apiRequest<{ review: unknown }>(`/orders/${id}/review`, {
@@ -796,3 +805,89 @@ export const productApi = {
     }
   },
 };
+
+// ─────────────────────────────────────────────────────────
+// REVIEWS API
+// ─────────────────────────────────────────────────────────
+
+export interface StorefrontReviewItem {
+  id: string;
+  name: string;
+  location: string;
+  rating: number;
+  date: string;
+  quote: string;
+  title?: string;
+  images: string[];
+  verified: boolean;
+  helpfulCount: number;
+  templateName?: string;
+}
+
+export interface StorefrontReviewsResponse {
+  reviews: StorefrontReviewItem[];
+  stats: {
+    averageRating: number;
+    totalReviews: number;
+    ratingBreakdown: Record<number, number>;
+  };
+}
+
+export const reviewApi = {
+  async getPublicReviews(): Promise<StorefrontReviewsResponse> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/reviews`, {
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        return {
+          reviews: [],
+          stats: { averageRating: 0, totalReviews: 0, ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } },
+        };
+      }
+      const json = await res.json();
+      return json.data || {
+        reviews: [],
+        stats: { averageRating: 0, totalReviews: 0, ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } },
+      };
+    } catch (err) {
+      console.error("Failed to fetch public reviews:", err);
+      return {
+        reviews: [],
+        stats: { averageRating: 0, totalReviews: 0, ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } },
+      };
+    }
+  },
+};
+
+export interface SubmitTicketPayload {
+  name?: string;
+  email?: string;
+  phone?: string;
+  topic: string;
+  orderId?: string;
+  message: string;
+  images?: string[];
+}
+
+export const supportApi = {
+  async submitTicket(data: SubmitTicketPayload): Promise<{
+    success: boolean;
+    ticketNumber?: string;
+    message?: string;
+    error?: string;
+  }> {
+    const token = getStoredToken();
+    const res = await fetch(`${API_BASE_URL}/support/ticket`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+};
+

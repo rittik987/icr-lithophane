@@ -8,7 +8,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ASSETS } from "@/lib/assets";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/lib/cart";
-import { orderApi } from "@/lib/api";
+import { orderApi, uploadApi } from "@/lib/api";
 import { OrderDetailSkeleton } from "@/components/Skeleton";
 
 function formatRupees(paise: number = 0): string {
@@ -70,6 +70,8 @@ export default function OrderDetailsPage() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [reviewTitle, setReviewTitle] = useState("");
+  const [reviewPhotos, setReviewPhotos] = useState<Array<{ url: string; publicId?: string }>>([]);
+  const [isUploadingReviewPhotos, setIsUploadingReviewPhotos] = useState(false);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [reviewSuccess, setReviewSuccess] = useState(false);
   const [reviewError, setReviewError] = useState("");
@@ -107,6 +109,27 @@ export default function OrderDetailsPage() {
     setTimeout(() => setCopiedId(false), 2000);
   };
 
+  const handleReviewPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    try {
+      setIsUploadingReviewPhotos(true);
+      setReviewError("");
+      const res = await uploadApi.uploadFiles(files, "customer-reviews");
+      if (res.success && res.assets) {
+        const newPhotos = res.assets.map((a) => ({ url: a.url, publicId: a.id }));
+        setReviewPhotos((prev) => [...prev, ...newPhotos].slice(0, 5));
+      } else {
+        setReviewError(res.error || "Failed to upload photos.");
+      }
+    } catch {
+      setReviewError("Error uploading photos. Please check file format and size.");
+    } finally {
+      setIsUploadingReviewPhotos(false);
+      e.target.value = "";
+    }
+  };
+
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!orderId || !reviewComment.trim()) return;
@@ -118,6 +141,7 @@ export default function OrderDetailsPage() {
         title: reviewTitle.trim() || undefined,
         comment: reviewComment.trim(),
         reviewerName: user?.name,
+        mediaUrls: reviewPhotos,
       });
       if (res.success) {
         setReviewSuccess(true);
@@ -267,72 +291,145 @@ export default function OrderDetailsPage() {
                 </div>
 
                 <div className="self-start sm:self-auto">
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-wide uppercase px-3 py-1 rounded-full bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#D97706] animate-pulse"></span>
+                  <span
+                    className={`inline-flex items-center gap-1.5 text-[11px] font-bold tracking-wide uppercase px-3 py-1 rounded-full border ${
+                      order.status === "DELIVERED"
+                        ? "bg-[#DCFCE7] text-[#166534] border-[#BBF7D0]"
+                        : order.status === "CANCELLED"
+                        ? "bg-[#FEE2E2] text-[#991B1B] border-[#FECACA]"
+                        : "bg-[#FEF3C7] text-[#92400E] border-[#FDE68A]"
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        order.status === "DELIVERED"
+                          ? "bg-[#16A34A]"
+                          : order.status === "CANCELLED"
+                          ? "bg-[#DC2626]"
+                          : "bg-[#D97706] animate-pulse"
+                      }`}
+                    />
                     <span>{order.status}</span>
                   </span>
                 </div>
               </div>
 
-              {/* ── Shipment & Production Status ──────────────── */}
-              <div className="bg-[#FAF8F5] border border-[#EAE4DC] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-start sm:items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-[#F3EFE9] text-[#786F66] flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <rect x="1" y="3" width="15" height="13"></rect>
-                      <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
-                      <circle cx="5.5" cy="18.5" r="2.5"></circle>
-                      <circle cx="18.5" cy="18.5" r="2.5"></circle>
-                    </svg>
-                  </div>
+              {/* ── Shipment & Delivery Status Banner ──────────── */}
+              {order.status === "DELIVERED" ? (
+                <div className="bg-[#F0FDF4] border border-[#BBF7D0] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start sm:items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-[#DCFCE7] text-[#16A34A] flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
 
-                  <div>
-                    {order.trackingUrl ? (
-                      <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-[#1A1412]">
-                        <span>Dispatched via {order.courierName || "Courier"}</span>
-                        {order.trackingNumber && (
-                          <span className="font-mono text-[11px] text-[#786F66]">
-                            · AWB: {order.trackingNumber}
+                    <div>
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm font-bold text-[#14532D]">
+                        <span>Delivered & Handcrafted with Care</span>
+                        {order.courierName && (
+                          <span className="font-normal text-xs text-[#166534]">
+                            · Delivered via {order.courierName}
                           </span>
                         )}
                       </div>
-                    ) : (
-                      /* Exact text requested */
-                      <span className="text-xs sm:text-sm font-semibold text-[#1A1412]">
-                        Tracking link will be sharing soon
-                      </span>
-                    )}
-                    <p className="text-[11px] text-[#786F66] mt-0.5 leading-relaxed">
-                      Each lithophane lamp is precision 3D laser-engraved and handcrafted in 2–4 business days.
+                      <p className="text-[11px] text-[#166534]/90 mt-0.5 leading-relaxed">
+                        Your custom 3D lithophane keepsake has been safely delivered. We hope it illuminates your home with warmth and cherishable memories!
+                      </p>
+                    </div>
+                  </div>
+
+                  <a
+                    href="#order-review-section"
+                    className="inline-flex items-center justify-center gap-1.5 bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all shadow-xs shrink-0 self-start sm:self-auto cursor-pointer"
+                  >
+                    <span>Rate Keepsake ★</span>
+                  </a>
+                </div>
+              ) : order.status === "CANCELLED" ? (
+                <div className="bg-[#FEF2F2] border border-[#FECACA] rounded-2xl p-4 sm:p-5 flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-[#FEE2E2] text-[#DC2626] flex items-center justify-center shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="15" y1="9" x2="9" y2="15" />
+                      <line x1="9" y1="9" x2="15" y2="15" />
+                    </svg>
+                  </div>
+                  <div>
+                    <span className="text-xs sm:text-sm font-bold text-[#991B1B]">Order Cancelled</span>
+                    <p className="text-[11px] text-[#B91C1C] mt-0.5">
+                      This order has been cancelled. If any payment was deducted, it will be refunded automatically.
                     </p>
                   </div>
                 </div>
+              ) : (
+                <div className="bg-[#FAF8F5] border border-[#EAE4DC] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start sm:items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-[#F3EFE9] text-[#786F66] flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect x="1" y="3" width="15" height="13" />
+                        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                        <circle cx="5.5" cy="18.5" r="2.5" />
+                        <circle cx="18.5" cy="18.5" r="2.5" />
+                      </svg>
+                    </div>
 
-                {order.trackingUrl && (
-                  <a
-                    href={order.trackingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-1.5 bg-[#D47124] hover:bg-[#BA5D17] text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all shadow-xs shrink-0 self-start sm:self-auto"
-                  >
-                    <span>Track Shipment</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                      <polyline points="15 3 21 3 21 9"></polyline>
-                      <line x1="10" y1="14" x2="21" y2="3"></line>
-                    </svg>
-                  </a>
-                )}
-              </div>
+                    <div>
+                      {order.trackingUrl ? (
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-[#1A1412]">
+                          <span>Dispatched via {order.courierName || "Courier"}</span>
+                          {order.trackingNumber && (
+                            <span className="font-mono text-[11px] text-[#786F66]">
+                              · AWB: {order.trackingNumber}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs sm:text-sm font-semibold text-[#1A1412]">
+                          Tracking link will be shared soon
+                        </span>
+                      )}
+                      <p className="text-[11px] text-[#786F66] mt-0.5 leading-relaxed">
+                        Each lithophane lamp is precision 3D laser-engraved and handcrafted in 2–4 business days.
+                      </p>
+                    </div>
+                  </div>
+
+                  {order.trackingUrl && (
+                    <a
+                      href={order.trackingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-1.5 bg-[#D47124] hover:bg-[#BA5D17] text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all shadow-xs shrink-0 self-start sm:self-auto"
+                    >
+                      <span>Track Shipment</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                    </a>
+                  )}
+                </div>
+              )}
 
               {/* ── Keepsakes Gallery & Assets ────────────────── */}
               <div className="flex flex-col gap-4">
@@ -589,7 +686,10 @@ export default function OrderDetailsPage() {
 
             {/* ── Delivered Order Review & Rating Card ── */}
             {order.status === "DELIVERED" && (
-              <section className="bg-white border border-[#EAE4DC] rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-[0_4px_24px_-4px_rgba(46,30,18,0.04)] flex flex-col gap-5">
+              <section
+                id="order-review-section"
+                className="bg-white border border-[#EAE4DC] rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-[0_4px_24px_-4px_rgba(46,30,18,0.04)] flex flex-col gap-5 scroll-mt-24"
+              >
                 <div className="flex items-center justify-between pb-4 border-b border-[#F0EAE1]">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-[#FEF3C7] text-[#D97706] flex items-center justify-center shrink-0">
@@ -614,6 +714,8 @@ export default function OrderDetailsPage() {
                         setReviewRating(existing.rating);
                         setReviewTitle(existing.title || "");
                         setReviewComment(existing.comment || "");
+                        const existingMedia = Array.isArray(existing.mediaUrls) ? existing.mediaUrls : [];
+                        setReviewPhotos(existingMedia);
                         setIsEditingReview(true);
                       }}
                       className="text-xs font-semibold text-[#D47124] hover:underline cursor-pointer"
@@ -630,7 +732,9 @@ export default function OrderDetailsPage() {
                         {[1, 2, 3, 4, 5].map((star) => (
                           <svg
                             key={star}
-                            className={`w-5 h-5 ${star <= order.reviews![0].rating ? "fill-current" : "text-gray-300 fill-current"}`}
+                            className={`w-5 h-5 ${
+                              star <= order.reviews![0].rating ? "fill-current" : "text-gray-300 fill-current"
+                            }`}
                             viewBox="0 0 20 20"
                           >
                             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
@@ -650,6 +754,32 @@ export default function OrderDetailsPage() {
                     <p className="text-xs text-[#5C534E] leading-relaxed italic">
                       &ldquo;{order.reviews[0].comment}&rdquo;
                     </p>
+
+                    {/* Customer UGC Photos */}
+                    {order.reviews[0].mediaUrls && order.reviews[0].mediaUrls.length > 0 && (
+                      <div className="flex items-center gap-2 flex-wrap pt-1">
+                        {order.reviews[0].mediaUrls.map((photo, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() =>
+                              setActivePhoto({
+                                url: photo.url,
+                                slotLabel: "Customer Review Photo",
+                                templateName: "Customer Review",
+                              })
+                            }
+                            className="relative w-16 h-16 rounded-xl overflow-hidden border border-[#EAE4DC] bg-white cursor-pointer hover:opacity-90 transition-opacity"
+                          >
+                            <Image
+                              src={photo.url}
+                              alt="Review photo"
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <form onSubmit={handleSubmitReview} className="flex flex-col gap-4">
@@ -667,7 +797,7 @@ export default function OrderDetailsPage() {
                     {/* Star selector */}
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-[#1A1412]">
-                        Overall Rating
+                        Overall Rating <span className="text-red-500">*</span>
                       </label>
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-1">
@@ -732,6 +862,74 @@ export default function OrderDetailsPage() {
                         placeholder="What did you love about your personalized lithophane lamp? How was the light quality and packaging?"
                         className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-[#EAE4DC] focus:outline-hidden focus:border-[#D47124] focus:ring-2 focus:ring-[#D47124]/15 bg-[#FAF8F5] resize-none"
                       />
+                    </div>
+
+                    {/* Photos of lit lamp */}
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-[#1A1412] flex items-center justify-between">
+                        <span>Photos of Your Lit Lamp (Optional)</span>
+                        <span className="text-[11px] font-normal text-[#786F66]">Up to 5 images</span>
+                      </label>
+
+                      {reviewPhotos.length > 0 && (
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          {reviewPhotos.map((photo, index) => (
+                            <div
+                              key={index}
+                              className="relative w-16 h-16 rounded-xl border border-[#EAE4DC] overflow-hidden group bg-[#FAF8F5]"
+                            >
+                              <Image
+                                src={photo.url}
+                                alt={`Customer photo ${index + 1}`}
+                                fill
+                                className="object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setReviewPhotos((prev) => prev.filter((_, i) => i !== index))}
+                                className="absolute top-1 right-1 w-5 h-5 bg-black/75 hover:bg-black text-white rounded-full flex items-center justify-center transition-colors text-[10px] cursor-pointer"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <label
+                        className={`border border-dashed border-[#EAE4DC] hover:border-[#D47124] rounded-xl p-3 sm:p-4 flex items-center justify-center gap-2 cursor-pointer bg-[#FAF8F5] transition-colors ${
+                          isUploadingReviewPhotos ? "opacity-50 pointer-events-none" : ""
+                        }`}
+                      >
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/png,image/jpeg,image/webp"
+                          className="hidden"
+                          disabled={isUploadingReviewPhotos || reviewPhotos.length >= 5}
+                          onChange={handleReviewPhotoUpload}
+                        />
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          className="text-[#786F66]"
+                        >
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                          <circle cx="8.5" cy="8.5" r="1.5" />
+                          <polyline points="21 15 16 10 5 21" />
+                        </svg>
+                        <span className="text-xs font-semibold text-[#1A1412]">
+                          {isUploadingReviewPhotos
+                            ? "Uploading photo(s)..."
+                            : reviewPhotos.length >= 5
+                            ? "Maximum 5 photos reached"
+                            : "Upload Photos of Your Lit Lamp"}
+                        </span>
+                      </label>
                     </div>
 
                     <div className="flex items-center gap-3 pt-1">

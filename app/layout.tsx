@@ -18,11 +18,11 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "ICR Custom Creations — Personalised Lithophane Lamps",
   description:
-    "Transform your cherished photograph into a handcrafted walnut-framed lithophane lamp. Free pan-India delivery. ₹2,999 all-inclusive.",
+    "Transform your cherished photograph into a handcrafted wooden-framed lithophane lamp. Free pan-India delivery.",
   openGraph: {
     title: "ICR Custom Creations — Personalised Lithophane Lamps",
     description:
-      "Heirloom-quality 3D-carved photo lamps in solid walnut. Free pan-India delivery.",
+      "Heirloom-quality 3D-printed photo lamps in a handcrafted wooden frame. Free pan-India delivery.",
     type: "website",
   },
   icons: {

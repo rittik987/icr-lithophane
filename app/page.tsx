@@ -8,7 +8,6 @@ import HowItWorks from "@/components/HowItWorks";
 import ReviewsSection from "@/components/ReviewsSection";
 import Footer from "@/components/Footer";
 import StickyBottomBar from "@/components/StickyBottomBar";
-import StarRating from "@/components/StarRating";
 import { productApi } from "@/lib/api";
 import { adaptProductMediaToSlides } from "@/lib/slides";
 
@@ -61,13 +60,8 @@ export default async function HomePage() {
                     {product?.name || "Personalised Lithophane Lamp"}
                   </h1>
                   <p className="text-[#6e5c50] text-[14px] font-sans leading-relaxed">
-                    {product?.description || "Transform your cherished photo into a warm-glowing 3D keepsake, handcrafted in solid walnut."}
+                    {product?.description || "Transform your cherished photo into a warm-glowing 3D keepsake, handcrafted in a wooden frame."}
                   </p>
-                  {/* Star rating */}
-                  <div className="flex items-center gap-2 mt-1">
-                    <StarRating count={5} size={14} />
-                    <span className="text-[#6e5c50] text-[13px] font-sans">4.9 &nbsp;·&nbsp; 850+ customers</span>
-                  </div>
                 </div>
 
                 {/* Divider */}

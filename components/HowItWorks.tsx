@@ -3,11 +3,11 @@ const STEPS = [
     number: "1",
     title: "Upload Your Photo",
     description:
-      "Share any phone portrait, wedding snap, or vintage memory. Our studio checks contrast and tonal balance before casting begins.",
+      "Share any photo — a portrait, wedding snap, or vintage memory. Our studio checks contrast and tonal balance before printing begins.",
   },
   {
     number: "2",
-    title: "Precision Carved & Backlit",
+    title: "Crafted with Precision & Light",
     description:
       "3D printed with micron-level detail to capture light and shadow perfectly.",
   },
@@ -28,7 +28,7 @@ export default function HowItWorks() {
           className="text-[#e07a28] text-[11px] font-bold tracking-[0.2em] uppercase"
           style={{ fontFamily: "var(--font-sans)" }}
         >
-          SIMPLE PROCESS
+          THREE EASY STEPS
         </span>
         <h2
           className="text-[#2e1e12] text-[24px] font-semibold leading-[1.5]"
@@ -40,7 +40,7 @@ export default function HowItWorks() {
           className="text-[#6e5c50] text-[13px] leading-[1.5] max-w-xs"
           style={{ fontFamily: "var(--font-sans)" }}
         >
-          From cherished photograph to heirloom light in three simple steps.
+          From a cherished photograph to a glowing heirloom — in just three simple steps.
         </p>
       </div>
 

@@ -12,12 +12,14 @@ import {
   setStoredRefreshToken,
   isTokenExpiringSoon,
 } from "@/lib/api";
+import { syncCartWithServer } from "@/lib/cart";
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
   login: (phone: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithGoogle: (idToken: string) => Promise<{ success: boolean; error?: string }>;
   register: (phone: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   updateProfile: (data: { name?: string; phone?: string; avatarUrl?: string }) => Promise<{ success: boolean; error?: string }>;
@@ -167,9 +169,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setStoredRefreshToken(res.data.refreshToken);
       }
       setAuthCookie();
+      syncCartWithServer().catch(() => {});
       return { success: true };
     }
     return { success: false, error: res.error || "Login failed" };
+  }, []);
+
+  const loginWithGoogle = useCallback(async (idToken: string) => {
+    const res = await authApi.googleAuth(idToken);
+    if (res.success && res.data) {
+      setUser(res.data.user);
+      setToken(res.data.accessToken);
+      localStorage.setItem("icr_user", JSON.stringify(res.data.user));
+      localStorage.setItem("icr_token", res.data.accessToken);
+      if (res.data.refreshToken) {
+        setStoredRefreshToken(res.data.refreshToken);
+      }
+      setAuthCookie();
+      syncCartWithServer().catch(() => {});
+      return { success: true };
+    }
+    return { success: false, error: res.error || "Google sign-in failed" };
   }, []);
 
   const register = useCallback(async (phone: string, password: string, name: string) => {
@@ -183,6 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setStoredRefreshToken(res.data.refreshToken);
       }
       setAuthCookie();
+      syncCartWithServer().catch(() => {});
       return { success: true };
     }
     return { success: false, error: res.error || "Registration failed" };
@@ -224,6 +245,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         token,
         isLoading,
         login,
+        loginWithGoogle,
         register,
         logout,
         updateProfile,

@@ -325,44 +325,89 @@ export default function OrdersListPage() {
                     </div>
                   </div>
 
-                  {/* ── Tracking Strip ────────────────────────── */}
-                  <div className="bg-[#faf7f2] border border-[#e5ddd0] rounded-xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-[#f2ebdc] text-[#6e5c50] flex items-center justify-center shrink-0">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="1" y="3" width="15" height="13" />
-                          <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-                          <circle cx="5.5" cy="18.5" r="2.5" />
-                          <circle cx="18.5" cy="18.5" r="2.5" />
-                        </svg>
+                  {/* ── Delivery / Tracking Strip ────────────────────────── */}
+                  {order.status === "DELIVERED" ? (
+                    <div className="bg-[#f0fdf4] border border-[#bbf7d0] rounded-xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-[#dcfce7] text-[#16a34a] flex items-center justify-center shrink-0">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-[#14532d]">Delivered & Received</span>
+                          <span className="text-[11px] text-[#166534] block sm:inline sm:ml-2">
+                            · Handcrafted keepsake glowing in your home
+                          </span>
+                        </div>
                       </div>
-                      <div>
-                        {hasTracking ? (
-                          <div className="flex flex-wrap items-center gap-1.5 font-semibold text-[#2e1e12]">
-                            <span>Dispatched with {order.courierName || "Courier"}</span>
-                            {order.trackingNumber && (
-                              <span className="font-mono text-[11px] text-[#6e5c50]">· AWB: {order.trackingNumber}</span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="font-semibold text-[#2e1e12]">Tracking link will be shared soon</span>
-                        )}
-                        <span className="text-[11px] text-[#6e5c50] block sm:inline sm:ml-2">
-                          · Handcrafted & laser-engraved in 2–4 business days
-                        </span>
+
+                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                        <Link
+                          href={`/orders/${order.id}#order-review-section`}
+                          className="inline-flex items-center gap-1.5 bg-[#16a34a] hover:bg-[#15803d] text-white text-xs font-bold uppercase tracking-wider px-3.5 py-2 rounded-xl transition-all shadow-xs shrink-0"
+                        >
+                          <span>Rate Keepsake ★</span>
+                        </Link>
+                        <Link
+                          href={`/orders/${order.id}`}
+                          className="inline-flex items-center gap-1.5 bg-[#faf7f2] hover:bg-[#f2ebdc] text-[#2e1e12] border border-[#e5ddd0] text-xs font-semibold px-3 py-2 rounded-xl transition-all shrink-0"
+                        >
+                          <span>Details</span>
+                        </Link>
                       </div>
                     </div>
+                  ) : order.status === "CANCELLED" ? (
+                    <div className="bg-[#fef2f2] border border-[#fecaca] rounded-xl p-3 sm:p-3.5 flex items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-2.5 text-[#991B1B]">
+                        <span className="font-semibold">Order Cancelled</span>
+                      </div>
+                      <Link
+                        href={`/orders/${order.id}`}
+                        className="text-xs font-semibold text-[#6e5c50] hover:text-[#2e1e12]"
+                      >
+                        View Details
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="bg-[#faf7f2] border border-[#e5ddd0] rounded-xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-lg bg-[#f2ebdc] text-[#6e5c50] flex items-center justify-center shrink-0">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="1" y="3" width="15" height="13" />
+                            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+                            <circle cx="5.5" cy="18.5" r="2.5" />
+                            <circle cx="18.5" cy="18.5" r="2.5" />
+                          </svg>
+                        </div>
+                        <div>
+                          {hasTracking ? (
+                            <div className="flex flex-wrap items-center gap-1.5 font-semibold text-[#2e1e12]">
+                              <span>Dispatched with {order.courierName || "Courier"}</span>
+                              {order.trackingNumber && (
+                                <span className="font-mono text-[11px] text-[#6e5c50]">· AWB: {order.trackingNumber}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="font-semibold text-[#2e1e12]">Tracking link will be shared soon</span>
+                          )}
+                          <span className="text-[11px] text-[#6e5c50] block sm:inline sm:ml-2">
+                            · Handcrafted & laser-engraved in 2–4 business days
+                          </span>
+                        </div>
+                      </div>
 
-                    <Link
-                      href={`/orders/${order.id}`}
-                      className="inline-flex items-center gap-1.5 bg-[#e07a28] hover:bg-[#c96a1f] text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all shadow-xs active:scale-[0.98] group self-end sm:self-auto shrink-0"
-                    >
-                      <span>View Details</span>
-                      <svg width="12" height="12" viewBox="0 0 20 20" fill="none" className="transition-transform group-hover:translate-x-0.5">
-                        <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </Link>
-                  </div>
+                      <Link
+                        href={`/orders/${order.id}`}
+                        className="inline-flex items-center gap-1.5 bg-[#e07a28] hover:bg-[#c96a1f] text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all shadow-xs active:scale-[0.98] group self-end sm:self-auto shrink-0"
+                      >
+                        <span>View Details</span>
+                        <svg width="12" height="12" viewBox="0 0 20 20" fill="none" className="transition-transform group-hover:translate-x-0.5">
+                          <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </Link>
+                    </div>
+                  )}
                 </article>
               );
             })}
