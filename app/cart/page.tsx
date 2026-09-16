@@ -310,7 +310,7 @@ export default function CartPage() {
                             Personalized Lithophane Lamp
                           </h3>
                           <p className="text-xs text-[#6e5c50] font-sans mt-0.5">
-                            20×15cm · Solid Walnut Base · Warm LED
+                            8×6" · Wooden Frame · Warm LED
                           </p>
                         </div>
                       </div>
@@ -674,7 +674,7 @@ export default function CartPage() {
                         <path d="M2 3h12a1 1 0 011 1v8a1 1 0 01-1 1H2a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.5"/>
                         <path d="M5 3v10M11 3v10" stroke="currentColor" strokeWidth="1.5"/>
                       </svg>
-                      <span>100% Genuine Solid Walnut Wood Base</span>
+                      <span>100% Genuine Handcrafted Wooden Frame</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-[#e07a28] shrink-0">

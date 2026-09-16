@@ -87,7 +87,7 @@ export async function buildCartItemPayload(
   }
 
   const resolvedPrice = itemPrice ?? 2999;
-  const resolvedOriginalPrice = itemOriginalPrice ?? 4999;
+  const resolvedOriginalPrice = itemOriginalPrice ?? 2199;
 
   // 1. Generate composite preview if not provided
   let preview = customPreviewDataUrl;

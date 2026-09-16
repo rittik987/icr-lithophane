@@ -22,11 +22,7 @@ export default function StickyBottomBar({ product }: StickyBottomBarProps) {
     product?.mrp !== undefined ? Math.round(product.mrp / 100) : null;
 
   function handleOrderClick() {
-    if (!user) {
-      router.push("/login?redirect=/customize");
-    } else {
-      router.push("/customize");
-    }
+    router.push("/customize");
   }
 
   return (

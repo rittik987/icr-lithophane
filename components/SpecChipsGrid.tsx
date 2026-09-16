@@ -15,8 +15,8 @@ const SPECS: SpecChip[] = [
     icon: ASSETS.iconProportion,
     iconW: 16.67,
     iconH: 13.33,
-    label: "PROPORTION",
-    value: "Single Size: 8 × 6 Inches",
+    label: "FRAME SIZE",
+    value: "Single Size: 8 × 6 inches",
     altText: "Proportion icon",
   },
   {
@@ -32,7 +32,7 @@ const SPECS: SpecChip[] = [
     iconW: 20,
     iconH: 16.67,
     label: "WOOD FRAMING",
-    value: "Solid Walnut Wood",
+    value: "Wooden Frame",
     altText: "Wood icon",
   },
   {
@@ -40,7 +40,7 @@ const SPECS: SpecChip[] = [
     iconW: 10,
     iconH: 15,
     label: "POWER & CABLE",
-    value: "Power DC adapter",
+    value: "DC Power Adapter",
     altText: "Power icon",
   },
 ];

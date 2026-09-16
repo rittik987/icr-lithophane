@@ -62,7 +62,7 @@ export default function CustomizeView({ initialProduct }: CustomizeViewProps) {
       ? Math.round(product.sellingPrice / 100)
       : 2999;
   const mrp =
-    product?.mrp !== undefined ? Math.round(product.mrp / 100) : 4999;
+    product?.mrp !== undefined ? Math.round(product.mrp / 100) : 2199;
 
   const [selectedId, setSelectedId] = useState<string>(
     getDefaultTemplate().id
@@ -131,7 +131,12 @@ export default function CustomizeView({ initialProduct }: CustomizeViewProps) {
         customPreviewUrl,
         { sellingPrice, mrp }
       );
-      addToCart(payload);
+      const createdItem = addToCart(payload);
+      if (!user) {
+        // Unauthenticated customer: Require login to save keepsake to customer account
+        router.push(`/login?redirect=${encodeURIComponent(`/cart?added=${createdItem.id}`)}`);
+        return;
+      }
       showToast({
         title: "Added to your Cart!",
         message: `${template.name} · ₹${sellingPrice.toLocaleString("en-IN")}`,

@@ -100,10 +100,10 @@ export default function AboutUsPage() {
               </div>
               <div className="bg-[#faf7f2] p-4 rounded-xl border border-[#e5ddd0]">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-[#e07a28] mb-1">
-                  2. Solid Natural Walnut
+                  2. Handcrafted Wooden Frame
                 </h3>
                 <p className="text-xs text-[#6e5c50] leading-normal">
-                  Every base and frame is carved from authentic natural walnut wood, hand-sanded and finished with organic oils.
+                  Every frame is crafted from quality natural wood, carefully hand-sanded and finished to highlight its warm grain.
                 </p>
               </div>
               <div className="bg-[#faf7f2] p-4 rounded-xl border border-[#e5ddd0]">
@@ -111,7 +111,7 @@ export default function AboutUsPage() {
                   3. Warm Ambient LED Lighting
                 </h3>
                 <p className="text-xs text-[#6e5c50] leading-normal">
-                  Integrated 3000K warm-tone LEDs rated for 50,000+ hours cast a gentle, flicker-free glow ideal for bedrooms and living spaces.
+                  Integrated 2400K warm-tone LEDs rated for 50,000+ hours cast a gentle, flicker-free glow ideal for bedrooms and living spaces.
                 </p>
               </div>
               <div className="bg-[#faf7f2] p-4 rounded-xl border border-[#e5ddd0]">

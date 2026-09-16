@@ -50,16 +50,35 @@ export default function MediaCarousel({ className = "", slides }: MediaCarouselP
               className="relative shrink-0 w-full"
               style={{ paddingBottom: "75%" /* 4:3 */ }}
             >
-              <Image
-                src={slide.src}
-                alt={slide.alt}
-                fill
-                sizes="(max-width: 768px) 100vw, 600px"
-                className="object-cover"
-                priority={index <= 1}
-                loading={index <= 1 ? "eager" : "lazy"}
-                unoptimized={slide.src.startsWith("data:") || slide.src.endsWith(".svg") || slide.src.includes("figma.com")}
-              />
+              {slide.isVideo ? (
+                <video
+                  src={slide.src}
+                  poster={slide.posterUrl}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  preload="metadata"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              ) : (
+                <Image
+                  src={slide.src}
+                  alt={slide.alt}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 600px"
+                  className="object-cover"
+                  priority={index <= 1}
+                  loading={index <= 1 ? "eager" : "lazy"}
+                  unoptimized={
+                    slide.isGif ||
+                    slide.src.includes(".gif") ||
+                    slide.src.startsWith("data:") ||
+                    slide.src.endsWith(".svg") ||
+                    slide.src.includes("figma.com")
+                  }
+                />
+              )}
             </div>
           ))}
         </div>

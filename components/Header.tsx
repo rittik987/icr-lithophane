@@ -43,12 +43,8 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
     }
   }
 
-  function handleCustomizeClick(e: React.MouseEvent) {
+  function handleCustomizeClick() {
     setSidebarOpen(false);
-    if (!user) {
-      e.preventDefault();
-      router.push("/login?redirect=/customize");
-    }
   }
 
   return (
@@ -238,7 +234,7 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
 
         {/* Brand micro banner */}
         <div className="px-5 py-2.5 bg-[#eae2d2] border-b border-[#ded4c2] flex items-center justify-between text-[11px] font-medium text-[#6e5c50]">
-          <span>Handcrafted Lithophanes</span>
+          <span>Personalised Lithophane</span>
         </div>
 
         {/* Navigation list */}

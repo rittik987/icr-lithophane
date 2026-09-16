@@ -64,7 +64,7 @@ export default function PrivacyPolicyPage() {
           Privacy Policy
         </h1>
         <p className="text-xs text-[#6e5c50] font-sans mb-8">
-          Last updated: September 2026 • ICR Custom Creations Private Limited
+          Last updated: September 2026 • ICR Custom Creations
         </p>
 
         <div className="flex flex-col gap-6 text-sm leading-relaxed font-sans text-[#4a3b30] bg-white border border-[#e5ddd0] rounded-2xl p-6 sm:p-8 shadow-sm">
@@ -87,7 +87,7 @@ export default function PrivacyPolicyPage() {
               2. Privacy of Customer Photographs
             </h2>
             <p>
-              Your personal photographs are treated with the highest degree of confidentiality. Photographs uploaded to customize your lithophane lamp are stored securely and used <strong>strictly and exclusively</strong> for the precision 3D rendering and laser engraving of your physical keepsake.
+              Your personal photographs are treated with the highest degree of confidentiality. Photographs uploaded to customise your lithophane lamp are stored securely and used <strong>strictly and exclusively</strong> for the precision 3D printing of your physical keepsake.
             </p>
             <p className="text-xs text-[#6e5c50]">
               We do not share, sell, distribute, or publicly display customer-uploaded personal photos without your explicit, written consent.
