@@ -29,14 +29,7 @@ interface CustomizeViewProps {
 export default function CustomizeView({ initialProduct }: CustomizeViewProps) {
   const router = useRouter();
   const { showToast } = useToast();
-  const { user, isLoading } = useAuth();
-
-  // Client guard: redirect to login if unauthenticated
-  useEffect(() => {
-    if (!isLoading && !user) {
-      router.replace("/login?redirect=/customize");
-    }
-  }, [isLoading, user, router]);
+  const { user } = useAuth();
 
   // Handle pull-to-refresh
   const [isPullRefreshing, setIsPullRefreshing] = useState(false);
@@ -128,10 +121,6 @@ export default function CustomizeView({ initialProduct }: CustomizeViewProps) {
   }
 
   async function handleAddToCart(customPreviewUrl?: string) {
-    if (!user) {
-      router.push("/login?redirect=/customize");
-      return;
-    }
     if (isAddingToCart) return;
     setIsAddingToCart(true);
     try {
@@ -161,10 +150,6 @@ export default function CustomizeView({ initialProduct }: CustomizeViewProps) {
   }
 
   async function handlePlaceOrder(customPreviewUrl?: string) {
-    if (!user) {
-      router.push("/login?redirect=/customize");
-      return;
-    }
     if (isPlacingOrder) return;
     setIsPlacingOrder(true);
     try {
@@ -176,6 +161,11 @@ export default function CustomizeView({ initialProduct }: CustomizeViewProps) {
         { sellingPrice, mrp }
       );
       const createdItem = addToCart(payload);
+      if (!user) {
+        // Item is securely saved in localStorage! Redirect to login and then return straight to checkout
+        router.push(`/login?redirect=${encodeURIComponent(`/checkout?buyNow=${createdItem.id}`)}`);
+        return;
+      }
       router.push(`/checkout?buyNow=${encodeURIComponent(createdItem.id)}`);
     } catch (err) {
       console.error("Failed to place order:", err);
@@ -184,7 +174,7 @@ export default function CustomizeView({ initialProduct }: CustomizeViewProps) {
     }
   }
 
-  if (isLoading || !user || isPullRefreshing) {
+  if (isPullRefreshing) {
     return <CustomizeSkeleton />;
   }
 

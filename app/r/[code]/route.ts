@@ -7,7 +7,7 @@ export async function GET(
   const { code } = await context.params;
   const cleanCode = (code || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
 
-  const targetUrl = new URL("/customize", request.url);
+  const targetUrl = new URL("/", request.url);
   if (cleanCode) {
     targetUrl.searchParams.set("ref", cleanCode);
   }
