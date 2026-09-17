@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Dancing+Script:wght@600;700&display=swap");
 @import "tailwindcss";
 
 /* ── Tailwind v4 Theme Configuration ──────────────────────── */
@@ -21,6 +21,7 @@
   /* Typography */
   --font-family-serif: "Playfair Display", Georgia, serif;
   --font-family-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-family-script: "Dancing Script", cursive;
   
   /* Spacing - extends default Tailwind scale */
   --spacing-0_5: 2px;
@@ -64,6 +65,12 @@ html {
   --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left, 0px);
   --sar: env(safe-area-inset-right, 0px);
+
+  /* ── Hero image aspect ratios (tied to the 8×6 lamp frame) ─ */
+  /* Mobile portrait  0.82 → padding-bottom trick: 100/0.82 ≈ 121.95% */
+  --hero-aspect-mobile-pb: 121.95%;
+  /* Desktop landscape 1.17 → padding-bottom trick: 100/1.17 ≈ 85.47% */
+  --hero-aspect-desktop-pb: 85.47%;
 }
 
 body {

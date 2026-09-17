@@ -4,13 +4,15 @@ import useEmblaCarousel from "embla-carousel-react";
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { Slide, DEFAULT_SLIDES } from "@/lib/slides";
+import { StorefrontProduct } from "@/lib/api";
 
 interface MediaCarouselProps {
   className?: string;
   slides?: Slide[];
+  product?: StorefrontProduct | null;
 }
 
-export default function MediaCarousel({ className = "", slides }: MediaCarouselProps) {
+export default function MediaCarousel({ className = "", slides, product }: MediaCarouselProps) {
   const currentSlides = slides && slides.length > 0 ? slides : DEFAULT_SLIDES;
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -21,26 +23,38 @@ export default function MediaCarousel({ className = "", slides }: MediaCarouselP
   });
 
   const [activeIndex, setActiveIndex] = useState(0);
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(true);
 
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
     setActiveIndex(emblaApi.selectedScrollSnap());
+    setCanPrev(emblaApi.canScrollPrev());
+    setCanNext(emblaApi.canScrollNext());
   }, [emblaApi]);
 
   useEffect(() => {
     if (!emblaApi) return;
     emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onSelect);
     onSelect();
-    return () => { emblaApi.off("select", onSelect); };
+    return () => {
+      emblaApi.off("select", onSelect);
+      emblaApi.off("reInit", onSelect);
+    };
   }, [emblaApi, onSelect]);
 
   const goTo = useCallback((index: number) => {
     emblaApi?.scrollTo(index);
   }, [emblaApi]);
 
-  return (
-    <div className={`relative w-full rounded-xl overflow-hidden bg-[#f2ebdc] border border-[#e5ddd0] shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-2px_rgba(0,0,0,0.1)] ${className}`}>
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
 
+  return (
+    <div
+      className={`relative w-full overflow-hidden ${className}`}
+    >
       {/* ── Embla viewport ───────────────────────────────── */}
       <div ref={emblaRef} className="overflow-hidden" style={{ touchAction: "pan-y" }}>
         <div className="flex" style={{ backfaceVisibility: "hidden" }}>
@@ -48,7 +62,8 @@ export default function MediaCarousel({ className = "", slides }: MediaCarouselP
             <div
               key={slide.id}
               className="relative shrink-0 w-full"
-              style={{ paddingBottom: "75%" /* 4:3 */ }}
+              /* Mobile portrait aspect ratio: 0.82 → height = 100/0.82 ≈ 122% */
+              style={{ paddingBottom: "121.95%" }}
             >
               {slide.isVideo ? (
                 <video
@@ -84,15 +99,40 @@ export default function MediaCarousel({ className = "", slides }: MediaCarouselP
         </div>
       </div>
 
-      {/* Image counter — bottom right */}
-      <div className="absolute bottom-3 right-3 backdrop-blur-md bg-black/50 border border-white/15 rounded-full px-2.5 py-1 pointer-events-none">
-        <span className="text-white text-[11px] font-semibold font-sans tracking-wide">
-          {activeIndex + 1} / {currentSlides.length}
-        </span>
+      {/* ── Navigation arrows — bottom right ────────────── */}
+      <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
+        <button
+          aria-label="Previous image"
+          onClick={scrollPrev}
+          disabled={!canPrev}
+          className={`w-8 h-8 flex items-center justify-center rounded-full border border-white/30 backdrop-blur-sm transition-all duration-150 ${
+            canPrev
+              ? "bg-black/40 hover:bg-black/60 text-white cursor-pointer"
+              : "bg-black/20 text-white/30 cursor-default"
+          }`}
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <button
+          aria-label="Next image"
+          onClick={scrollNext}
+          disabled={!canNext}
+          className={`w-8 h-8 flex items-center justify-center rounded-full border border-white/30 backdrop-blur-sm transition-all duration-150 ${
+            canNext
+              ? "bg-black/40 hover:bg-black/60 text-white cursor-pointer"
+              : "bg-black/20 text-white/30 cursor-default"
+          }`}
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
       </div>
 
-      {/* Pagination dots — bottom centre */}
-      <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-1.5 pr-14">
+      {/* ── Pagination dots — bottom left ────────────────── */}
+      <div className="absolute bottom-4 left-5 flex items-center gap-1.5">
         {currentSlides.map((_, i) => (
           <button
             key={i}
@@ -101,7 +141,7 @@ export default function MediaCarousel({ className = "", slides }: MediaCarouselP
             className={`rounded-full shadow-sm transition-all duration-200 ${
               i === activeIndex
                 ? "w-5 h-1.5 bg-[#e07a28]"
-                : "w-1.5 h-1.5 bg-white/70"
+                : "w-1.5 h-1.5 bg-white/60"
             }`}
           />
         ))}

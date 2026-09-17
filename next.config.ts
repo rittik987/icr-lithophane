@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Allow the local network IP to receive HMR updates when testing on a
   // physical device (Android / iOS) connected to the same Wi-Fi as the dev machine.
-  allowedDevOrigins: ["192.168.1.7"],
+  allowedDevOrigins: ["192.168.1.7", "192.168.1.3"],
 
   // Disable floating dev indicators that overlap navigation buttons on mobile
   devIndicators: false,

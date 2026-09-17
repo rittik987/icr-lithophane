@@ -53,14 +53,15 @@ export default function MediaGalleryDesktop({ className = "", slides }: MediaGal
     <div className={`flex flex-col gap-3 ${className}`}>
 
       {/* ── Main image — Embla viewport ───────────────────── */}
-      <div className="relative w-full rounded-2xl overflow-hidden bg-[#f2ebdc] border border-[#e5ddd0] shadow-[0_8px_30px_rgba(46,30,18,0.12)]">
-        <div ref={emblaRef} className="overflow-hidden rounded-2xl" style={{ touchAction: "pan-y" }}>
+      <div className="relative w-full rounded-xl overflow-hidden bg-[#f2ebdc] border border-[#e5ddd0] shadow-[0_8px_30px_rgba(46,30,18,0.12)]">
+        <div ref={emblaRef} className="overflow-hidden" style={{ touchAction: "pan-y" }}>
           <div className="flex" style={{ backfaceVisibility: "hidden" }}>
             {currentSlides.map((slide, index) => (
               <div
                 key={slide.id}
                 className="relative shrink-0 w-full"
-                style={{ paddingBottom: "75%" /* 4:3 */ }}
+                /* Desktop landscape aspect ratio: 1.17 → height = 100/1.17 ≈ 85.47% */
+                style={{ paddingBottom: "85.47%" }}
               >
                 {slide.isVideo ? (
                   <video
@@ -101,7 +102,7 @@ export default function MediaGalleryDesktop({ className = "", slides }: MediaGal
           <button
             aria-label="Previous image"
             onClick={scrollPrev}
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full bg-white/85 backdrop-blur-sm border border-white/60 shadow-md hover:bg-white hover:scale-105 transition-all duration-150"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full bg-white/85 backdrop-blur-sm border border-white/60 shadow-md hover:bg-white hover:scale-105 transition-all duration-150 cursor-pointer"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <path d="M10 12L6 8l4-4" stroke="#2e1e12" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
@@ -114,7 +115,7 @@ export default function MediaGalleryDesktop({ className = "", slides }: MediaGal
           <button
             aria-label="Next image"
             onClick={scrollNext}
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full bg-white/85 backdrop-blur-sm border border-white/60 shadow-md hover:bg-white hover:scale-105 transition-all duration-150"
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full bg-white/85 backdrop-blur-sm border border-white/60 shadow-md hover:bg-white hover:scale-105 transition-all duration-150 cursor-pointer"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
               <path d="M6 4l4 4-4 4" stroke="#2e1e12" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
@@ -130,55 +131,57 @@ export default function MediaGalleryDesktop({ className = "", slides }: MediaGal
         </div>
       </div>
 
-      {/* ── Thumbnail strip ───────────────────────────────── */}
-      <div className="grid grid-cols-4 gap-2">
-        {currentSlides.map((slide, i) => (
-          <button
-            key={slide.id}
-            aria-label={`View ${slide.label}`}
-            onClick={() => scrollTo(i)}
-            className={`relative rounded-lg overflow-hidden border-2 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e07a28] ${
-              i === activeIndex
-                ? "border-[#e07a28] shadow-[0_0_0_3px_rgba(224,122,40,0.12)]"
-                : "border-transparent opacity-55 hover:opacity-85 hover:border-[#e5ddd0]"
-            }`}
-            style={{ aspectRatio: "4/3" }}
-          >
-            <Image
-              src={slide.isVideo && slide.posterUrl ? slide.posterUrl : slide.src}
-              alt={slide.alt}
-              fill
-              sizes="150px"
-              className="object-cover"
-              loading="eager"
-              unoptimized={
-                slide.isGif ||
-                slide.src.includes(".gif") ||
-                slide.src.startsWith("data:") ||
-                slide.src.endsWith(".svg") ||
-                slide.src.includes("figma.com")
-              }
-            />
-            {slide.isVideo && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/25 pointer-events-none">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </div>
-            )}
-            {slide.isGif && (
-              <span className="absolute bottom-1 right-1 px-1 py-0.2 bg-amber-600/90 text-white font-bold text-[9px] rounded font-mono pointer-events-none">
-                GIF
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Active slide label */}
-      <p className="text-[#6e5c50] text-[12px] font-sans text-center tracking-wide">
-        {currentSlides[activeIndex]?.label || ""}
-      </p>
+      {/* ── Thumbnail strip — dynamic count from API ──────── */}
+      {currentSlides.length > 1 && (
+        <div
+          className="grid gap-2"
+          style={{
+            gridTemplateColumns: `repeat(${Math.min(currentSlides.length, 6)}, 1fr)`,
+          }}
+        >
+          {currentSlides.map((slide, i) => (
+            <button
+              key={slide.id}
+              aria-label={`View ${slide.label}`}
+              onClick={() => scrollTo(i)}
+              className={`relative rounded-lg overflow-hidden border-2 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e07a28] cursor-pointer ${
+                i === activeIndex
+                  ? "border-[#e07a28] shadow-[0_0_0_3px_rgba(224,122,40,0.12)]"
+                  : "border-transparent opacity-55 hover:opacity-85 hover:border-[#e5ddd0]"
+              }`}
+              style={{ aspectRatio: "4/3" }}
+            >
+              <Image
+                src={slide.isVideo && slide.posterUrl ? slide.posterUrl : slide.src}
+                alt={slide.alt}
+                fill
+                sizes="150px"
+                className="object-cover"
+                loading="eager"
+                unoptimized={
+                  slide.isGif ||
+                  slide.src.includes(".gif") ||
+                  slide.src.startsWith("data:") ||
+                  slide.src.endsWith(".svg") ||
+                  slide.src.includes("figma.com")
+                }
+              />
+              {slide.isVideo && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/25 pointer-events-none">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              )}
+              {slide.isGif && (
+                <span className="absolute bottom-1 right-1 px-1 py-0.2 bg-amber-600/90 text-white font-bold text-[9px] rounded font-mono pointer-events-none">
+                  GIF
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
 
     </div>
   );

@@ -64,20 +64,40 @@ export function AddressCardSkeleton() {
 export function AccountSkeleton() {
   return (
     <div className="min-h-screen bg-[#faf7f2] flex flex-col">
-      <div className="h-16 border-b border-[#e5ddd0] bg-white/60" />
-      <main className="max-w-[800px] mx-auto px-4 py-8 w-full space-y-6">
-        <div className="bg-white border border-[#e5ddd0] rounded-2xl p-6 animate-pulse space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-[#ede5d6]" />
-            <div className="space-y-2 flex-1">
-              <div className="h-5 bg-[#ede5d6] rounded-md w-40" />
-              <div className="h-3 bg-[#f2ebdc] rounded-md w-28" />
+      <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md bg-[rgba(250,247,242,0.96)] border-b border-[#e5ddd0] h-14 sm:h-16" />
+      <main className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 pb-16 w-full flex-1">
+        <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] xl:grid-cols-[320px_1fr] gap-10 items-start">
+          {/* Left Sidebar Skeleton */}
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <div className="w-16 h-16 rounded-full bg-[#ede5d6] animate-pulse" />
+              <div className="h-5 bg-[#ede5d6] rounded-md w-36 animate-pulse" />
+              <div className="h-3 bg-[#f2ebdc] rounded-md w-44 animate-pulse" />
+              <div className="h-3 bg-[#f2ebdc] rounded-md w-32 animate-pulse" />
+              <div className="h-8 bg-[#ede5d6] rounded-xl w-28 mt-2 animate-pulse" />
+            </div>
+            <div className="h-px bg-[#e8dfd2]" />
+            <div className="space-y-2">
+              <div className="h-10 bg-[#ede5d6]/70 rounded-xl animate-pulse" />
+              <div className="h-10 bg-[#ede5d6]/70 rounded-xl animate-pulse" />
+              <div className="h-10 bg-[#ede5d6] rounded-xl animate-pulse" />
             </div>
           </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <AddressCardSkeleton />
-          <AddressCardSkeleton />
+
+          {/* Right Main Card Skeleton */}
+          <div className="bg-white border border-[#e8dfd2] rounded-3xl p-8 sm:p-10 shadow-xs space-y-6">
+            <div className="flex items-center justify-between pb-6 border-b border-[#f0e8dc]">
+              <div className="space-y-2">
+                <div className="h-7 bg-[#ede5d6] rounded-md w-48 animate-pulse" />
+                <div className="h-3.5 bg-[#f2ebdc] rounded-md w-72 animate-pulse" />
+              </div>
+              <div className="h-10 w-32 bg-[#452715]/20 rounded-xl animate-pulse" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <AddressCardSkeleton />
+              <AddressCardSkeleton />
+            </div>
+          </div>
         </div>
       </main>
     </div>
