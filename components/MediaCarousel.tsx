@@ -99,40 +99,10 @@ export default function MediaCarousel({ className = "", slides, product }: Media
         </div>
       </div>
 
-      {/* ── Navigation arrows — bottom right ────────────── */}
-      <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
-        <button
-          aria-label="Previous image"
-          onClick={scrollPrev}
-          disabled={!canPrev}
-          className={`w-8 h-8 flex items-center justify-center rounded-full border border-white/30 backdrop-blur-sm transition-all duration-150 ${
-            canPrev
-              ? "bg-black/40 hover:bg-black/60 text-white cursor-pointer"
-              : "bg-black/20 text-white/30 cursor-default"
-          }`}
-        >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-        <button
-          aria-label="Next image"
-          onClick={scrollNext}
-          disabled={!canNext}
-          className={`w-8 h-8 flex items-center justify-center rounded-full border border-white/30 backdrop-blur-sm transition-all duration-150 ${
-            canNext
-              ? "bg-black/40 hover:bg-black/60 text-white cursor-pointer"
-              : "bg-black/20 text-white/30 cursor-default"
-          }`}
-        >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-      </div>
+
 
       {/* ── Pagination dots — bottom left ────────────────── */}
-      <div className="absolute bottom-4 left-5 flex items-center gap-1.5">
+      <div className="absolute bottom-4 left-[50%] transform -translate-x-1/2 flex items-center gap-1.5">
         {currentSlides.map((_, i) => (
           <button
             key={i}

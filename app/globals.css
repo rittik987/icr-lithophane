@@ -38,6 +38,8 @@
 @layer utilities {
   .font-serif {
     font-family: var(--font-family-serif);
+    font-variant-numeric: lining-nums;
+    font-feature-settings: "lnum" 1;
   }
   
   .font-sans {
