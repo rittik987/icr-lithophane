@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import Script from "next/script";
+import { useCallback, useEffect } from "react";
 
 interface RazorpayAffordabilityWidgetProps {
   /** Product selling price in paise (e.g. 299900 for ₹2,999) */
@@ -14,6 +15,7 @@ declare global {
     RazorpayAffordabilitySuite: new (config: {
       key: string;
       amount: number;
+      currency?: string;
     }) => { render: () => void };
   }
 }
@@ -25,54 +27,42 @@ export default function RazorpayAffordabilityWidget({
   amount,
   razorpayKey,
 }: RazorpayAffordabilityWidgetProps) {
-  const initialized = useRef(false);
+  // If amount is below ₹1,500 (150,000 paise), banks offer 0 EMI plans. Fallback to ₹2,597 (259,700 paise) so EMI plans render.
+  const effectiveAmount = amount >= 150000 ? amount : 259700;
 
-  useEffect(() => {
-    // Guard: only run once even in React Strict Mode
-    if (initialized.current) return;
-
-    function initWidget() {
-      if (typeof window.RazorpayAffordabilitySuite === "undefined") return;
+  const initWidget = useCallback(() => {
+    if (typeof window === "undefined" || typeof window.RazorpayAffordabilitySuite === "undefined") return;
+    try {
       const suite = new window.RazorpayAffordabilitySuite({
         key: razorpayKey,
-        amount,
+        amount: effectiveAmount,
+        currency: "INR",
       });
       suite.render();
-      initialized.current = true;
+    } catch (err) {
+      console.warn("RazorpayAffordabilitySuite render error:", err);
     }
+  }, [effectiveAmount, razorpayKey]);
 
-    // If SDK already loaded (e.g. hot-reload), init immediately
-    if (typeof window.RazorpayAffordabilitySuite !== "undefined") {
+  useEffect(() => {
+    if (typeof window !== "undefined" && typeof window.RazorpayAffordabilitySuite !== "undefined") {
       initWidget();
-      return;
     }
-
-    // Deduplicate script tag in case component mounts more than once
-    const existing = document.querySelector<HTMLScriptElement>(
-      `script[src="${CDN_SRC}"]`
-    );
-
-    if (existing) {
-      existing.addEventListener("load", initWidget);
-      return () => existing.removeEventListener("load", initWidget);
-    }
-
-    const script = document.createElement("script");
-    script.src = CDN_SRC;
-    script.async = true;
-    script.onload = initWidget;
-    document.head.appendChild(script);
-
-    return () => {
-      // Only remove on true unmount; the SDK stays loaded for the session
-    };
-  }, [amount, razorpayKey]);
+  }, [initWidget]);
 
   return (
-    <div
-      id="razorpay-affordability-widget"
-      className="w-full"
-      aria-label="EMI and affordability options"
-    />
+    <>
+      <Script
+        src={CDN_SRC}
+        strategy="afterInteractive"
+        onLoad={initWidget}
+        onReady={initWidget}
+      />
+      <div
+        id="razorpay-affordability-widget"
+        className="w-full min-h-[36px]"
+        aria-label="EMI and affordability options"
+      />
+    </>
   );
 }

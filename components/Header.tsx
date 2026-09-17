@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -24,9 +24,14 @@ const DESKTOP_NAV_LINKS = [
 export default function Header({ cartCount: propCartCount }: HeaderProps) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const { totalCount } = useCart();
   const { user, logout, isLoading } = useAuth();
   const cartCount = propCartCount !== undefined ? propCartCount : totalCount;
+
+  // Defer cart badge rendering to client — prevents hydration mismatch
+  // because useCart() reads localStorage which doesn't exist on the server.
+  useEffect(() => { setIsMounted(true); }, []);
 
   function handleCartClick(e: React.MouseEvent) {
     if (!user) {
@@ -174,9 +179,11 @@ export default function Header({ cartCount: propCartCount }: HeaderProps) {
                 <line x1="3" y1="6" x2="21" y2="6" />
                 <path d="M16 10a4 4 0 0 1-8 0" />
               </svg>
-              <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#e07a28] text-white text-[10px] font-bold font-sans flex items-center justify-center leading-none shadow-xs border-2 border-[#faf7f2]">
-                {cartCount}
-              </span>
+              {isMounted && cartCount > 0 && (
+                <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#e07a28] text-white text-[10px] font-bold font-sans flex items-center justify-center leading-none shadow-xs border-2 border-[#faf7f2]">
+                  {cartCount}
+                </span>
+              )}
             </Link>
           </div>
         </div>

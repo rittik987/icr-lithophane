@@ -1,10 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ASSETS } from "@/lib/assets";
-import { useAuth } from "@/context/AuthContext";
 import { StorefrontProduct } from "@/lib/api";
+import CtaButton from "@/components/CtaButton";
 
 interface StickyBottomBarProps {
   product?: StorefrontProduct | null;
@@ -12,7 +10,6 @@ interface StickyBottomBarProps {
 
 export default function StickyBottomBar({ product }: StickyBottomBarProps) {
   const router = useRouter();
-  const { user } = useAuth();
 
   const sellingPrice =
     product?.sellingPrice !== undefined
@@ -46,33 +43,19 @@ export default function StickyBottomBar({ product }: StickyBottomBarProps) {
               </span>
             )}
           </div>
+          {sellingPrice !== null && (
+            <span className="text-[#6e5c50] text-[10px] font-sans">
+              All taxes included
+            </span>
+          )}
         </div>
 
         {/* CTA */}
-        <button
-          type="button"
+        <CtaButton
+          label="Customize & Order"
           onClick={handleOrderClick}
-          style={{ backgroundColor: "#e07a28" }}
-          className="hover:bg-[#c96a1f] active:bg-[#b85d1a] flex items-center gap-2 px-5 py-3 rounded-xs shadow-md transition-all shrink-0 cursor-pointer"
-        >
-          <span
-            className="font-bold font-sans uppercase whitespace-nowrap"
-            style={{ color: "#ffffff", fontSize: "13px", letterSpacing: "0.06em" }}
-          >
-            Customize &amp; Order
-          </span>
-          <div className="relative w-3 h-3 shrink-0">
-            <Image
-              src={ASSETS.iconArrow}
-              alt=""
-              fill
-              sizes="12px"
-              style={{ filter: "brightness(0) invert(1)" }}
-              className="object-contain"
-              unoptimized
-            />
-          </div>
-        </button>
+          size="sm"
+        />
       </div>
     </aside>
   );
