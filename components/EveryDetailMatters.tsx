@@ -3,8 +3,8 @@ import Image from "next/image";
 interface DetailSpecItem {
   id: string;
   category: string;
-  title: string;
-  mobileTitle: string;
+  title: React.ReactNode;
+  mobileTitle: React.ReactNode;
   description: string;
   mobileDescription: string;
   imageSrc: string;
@@ -33,8 +33,16 @@ const DETAIL_SPECS: DetailSpecItem[] = [
   {
     id: "light-engine",
     category: "LIGHT ENGINE",
-    title: "Warm 2400K LED Core",
-    mobileTitle: "Warm 2400K LED",
+    title: (
+      <>
+        Warm <span className="font-sans font-bold tracking-tight">2400</span>K LED Core
+      </>
+    ),
+    mobileTitle: (
+      <>
+        Warm <span className="font-sans font-bold tracking-tight">2400</span>K LED
+      </>
+    ),
     description: "A soft, soothing amber glow that illuminates every carved detail with gentle warmth.",
     mobileDescription: "Soft, warm light that creates an instant cozy ambience.",
     imageSrc: "/photos/detail-led-core.jpg",

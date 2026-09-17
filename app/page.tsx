@@ -32,20 +32,25 @@ export default async function HomePage() {
     mrp && mrp > sellingPrice && mrp > 0
       ? Math.round(((mrp - sellingPrice) / mrp) * 100)
       : 0;
-  const discountBadge =
+  const rawBadge =
     discountPercent > 0
-      ? (product?.computedDiscountBadge || product?.discountBadge || `SAVE ${discountPercent}% OFF`)
+      ? (product?.computedDiscountBadge || product?.discountBadge || `SAVE ${discountPercent}%`)
       : null;
+  // Format to clean, grammatically correct copy: "SAVE 27%" instead of redundant "SAVE 27% OFF"
+  const discountBadge = rawBadge
+    ? rawBadge.replace(/^SAVE\s+(\d+%)\s+OFF$/i, "SAVE $1").replace(/\s+OFF$/i, "")
+    : null;
 
-  const whatsIncluded =
+  const whatsIncluded = (
     product?.whatsIncluded && product.whatsIncluded.length > 0
       ? product.whatsIncluded
       : [
           "Custom lithophane in wooden frame",
-          "USB-C cable & power adapter",
+          "DC power adapter",
           "Gift-ready packaging",
           "Free pan-India delivery",
-        ];
+        ]
+  ).map((item) => item.replace(/solid walnut/gi, "wooden"));
 
   return (
     <>
@@ -79,15 +84,17 @@ export default async function HomePage() {
                   {product?.name || "Personalised Lithophane Lamp"}
                 </h1>
                 <p className="text-[#6e5c50] text-[13px] font-sans leading-relaxed">
-                  {product?.description ||
-                    "Transform your cherished photo into a warm-glowing 3D keepsake, handcrafted in a premium wooden frame."}
+                  {(
+                    product?.description ||
+                    "Transform your cherished photo into a warm-glowing 3D keepsake, handcrafted in a premium wooden frame."
+                  ).replace(/solid walnut/gi, "wooden")}
                 </p>
               </div>
 
               {/* Price row */}
-              <div className="flex items-center justify-between pt-1 border-t border-[#f0e8dc]">
+              <div className="flex items-center justify-between">
                 <div className="flex flex-col gap-0.5">
-                  <div className="flex items-baseline gap-2 leading-none">
+                  <div className="flex items-baseline gap-2.5 leading-none">
                     <span className="text-[#2e1e12] text-[28px] sm:text-[32px] font-bold leading-none font-sans">
                       ₹{sellingPrice.toLocaleString("en-IN")}
                     </span>
@@ -112,14 +119,9 @@ export default async function HomePage() {
                 )}
               </div>
 
-              {/* Razorpay EMI / Affordability widget */}
+              {/* Mobile Affordability Widget Slot */}
               {RAZORPAY_KEY && (
-                <div className="w-full">
-                  <RazorpayAffordabilityWidget
-                    amount={product?.sellingPrice ?? 0}
-                    razorpayKey={RAZORPAY_KEY}
-                  />
-                </div>
+                <div id="razorpay-widget-slot-mobile" className="w-full min-h-[36px]" />
               )}
 
               {/* CTA button */}
@@ -165,15 +167,17 @@ export default async function HomePage() {
 
                 {/* Eyebrow + headline + description */}
                 <div className="flex flex-col gap-2 relative">
-                  <p className="text-[#e07a28] text-[11px] font-bold tracking-[0.2em] uppercase font-sans">
+                  {/* <p className="text-[#e07a28] text-[11px] font-bold tracking-[0.2em] uppercase font-sans">
                     {product?.tagline || "HANDCRAFTED KEEPSAKE"}
-                  </p>
+                  </p> */}
                   <h1 className="text-[#2e1e12] text-[32px] font-bold leading-[1.22] font-serif">
                     {product?.name || "Personalised Lithophane Lamp"}
                   </h1>
                   <p className="text-[#6e5c50] text-[14px] font-sans leading-relaxed">
-                    {product?.description ||
-                      "Transform your cherished photo into a warm-glowing 3D keepsake, handcrafted in a premium wooden frame."}
+                    {(
+                      product?.description ||
+                      "Transform your cherished photo into a warm-glowing 3D keepsake, handcrafted in a premium wooden frame."
+                    ).replace(/solid walnut/gi, "wooden")}
                   </p>
                 </div>
 
@@ -208,12 +212,9 @@ export default async function HomePage() {
                   )}
                 </div>
 
-                {/* Razorpay EMI widget */}
+                {/* Desktop Affordability Widget Slot */}
                 {RAZORPAY_KEY && (
-                  <RazorpayAffordabilityWidget
-                    amount={product?.sellingPrice ?? 0}
-                    razorpayKey={RAZORPAY_KEY}
-                  />
+                  <div id="razorpay-widget-slot-desktop" className="w-full min-h-[36px]" />
                 )}
 
                 {/* CTA button */}
@@ -291,6 +292,14 @@ export default async function HomePage() {
         {/* Footer (Full Width) */}
         <Footer />
       </main>
+
+      {/* ── Single Razorpay Affordability Controller (Portals to active slot) ── */}
+      {RAZORPAY_KEY && (
+        <RazorpayAffordabilityWidget
+          amount={product?.sellingPrice ?? 0}
+          razorpayKey={RAZORPAY_KEY}
+        />
+      )}
 
       {/* ── Sticky bottom bar (mobile only, lg:hidden inside) ── */}
       <StickyBottomBar product={product} />

@@ -52,7 +52,7 @@ export default function StickyBottomBar({ product }: StickyBottomBarProps) {
 
         {/* CTA */}
         <CtaButton
-          label="Customize & Order"
+          label="Customize Now"
           onClick={handleOrderClick}
           size="sm"
         />

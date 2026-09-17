@@ -32,7 +32,7 @@ const FAQ_ITEMS: FaqItem[] = [
   {
     question: "How is it powered?",
     answer:
-      "The lamp comes with a standard USB-C cable and a 5V power adapter. You can plug it into any standard wall outlet, laptop, or portable power bank.",
+      "The lamp comes with a dedicated DC power adapter and cable. You can plug it into any standard wall outlet for safe, continuous illumination.",
   },
   {
     question: "How long does it take to make and deliver?",
@@ -128,7 +128,7 @@ export default function FaqSection() {
 
                     {/* Circular + / - button matching the design */}
                     <div
-                      className={`w-7 h-7 rounded-full border transition-all duration-200 flex items-center justify-center shrink-0 ${
+                      className={`w-7 h-7 rounded-full border transition-all duration-300 ease-in-out flex items-center justify-center shrink-0 ${
                         isOpen
                           ? "border-[#c96a1e] bg-[#c96a1e] text-white rotate-45"
                           : "border-[#d6cbbe] text-[#5a3a1a] bg-transparent group-hover:border-[#c96a1e]"
@@ -142,11 +142,22 @@ export default function FaqSection() {
                     </div>
                   </button>
 
-                  {isOpen && (
-                    <div className="pt-3 pr-8 text-[#5c493d] text-[14px] font-sans leading-relaxed animate-fadeIn">
-                      {item.answer}
+                  {/* Smooth Animated Accordion Drawer */}
+                  <div
+                    className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                      isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <div
+                        className={`pt-3 pb-1 pr-8 text-[#5c493d] text-[14px] font-sans leading-relaxed transition-opacity duration-300 ease-in-out ${
+                          isOpen ? "opacity-100" : "opacity-0"
+                        }`}
+                      >
+                        {item.answer}
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               );
             })}
@@ -186,7 +197,7 @@ export default function FaqSection() {
 
                     {/* Circular + / - button */}
                     <div
-                      className={`w-6 h-6 rounded-full border transition-all duration-200 flex items-center justify-center shrink-0 ${
+                      className={`w-6 h-6 rounded-full border transition-all duration-300 ease-in-out flex items-center justify-center shrink-0 ${
                         isOpen
                           ? "border-[#c96a1e] bg-[#c96a1e] text-white rotate-45"
                           : "border-[#d6cbbe] text-[#5a3a1a] bg-transparent"
@@ -200,11 +211,22 @@ export default function FaqSection() {
                     </div>
                   </button>
 
-                  {isOpen && (
-                    <div className="pt-2.5 pr-6 text-[#5c493d] text-[13px] font-sans leading-relaxed">
-                      {item.answer}
+                  {/* Smooth Animated Accordion Drawer */}
+                  <div
+                    className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                      isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <div
+                        className={`pt-2.5 pb-1 pr-6 text-[#5c493d] text-[13px] font-sans leading-relaxed transition-opacity duration-300 ease-in-out ${
+                          isOpen ? "opacity-100" : "opacity-0"
+                        }`}
+                      >
+                        {item.answer}
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               );
             })}
