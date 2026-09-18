@@ -18,13 +18,22 @@ export default function UploadSlots({
   onUpload,
   onRemove,
 }: UploadSlotsProps) {
+  const isCustomDesign = template.id === "custom-design";
+
   return (
     <div className="flex flex-col gap-3">
       {/* Section header */}
       <div className="flex items-center justify-between">
-        <p className="text-[#2e1e12] text-[16px] font-semibold font-sans">
-          Upload {template.photoSlots.length > 1 ? "Your Photos" : "Your Photo"}
-        </p>
+        <div>
+          <p className="text-[#2e1e12] text-[16px] font-semibold font-sans">
+            {isCustomDesign ? "Upload Custom Design" : `Upload ${template.photoSlots.length > 1 ? "Your Photos" : "Your Photo"}`}
+          </p>
+          {isCustomDesign && (
+            <p className="text-[#6e5c50] text-[12px] font-sans mt-0.5">
+              20 × 15 cm (8 × 6 in) · 4:3 ratio
+            </p>
+          )}
+        </div>
         <span className="text-[#6e5c50] text-[12px] font-sans">
           {Object.keys(uploadedFiles).length} / {template.photoSlots.length}
         </span>
@@ -184,7 +193,10 @@ function UploadBox({ slot, file, onUpload, onRemove }: UploadBoxProps) {
               </svg>
             </div>
             <div className="text-center">
-              <p className="text-[#2e1e12] text-[13px] font-semibold font-sans">Tap to upload</p>
+              <p className="text-[#2e1e12] text-[13px] font-semibold font-sans">
+                <span className="lg:hidden">Tap to upload</span>
+                <span className="hidden lg:inline">Click to upload or drag &amp; drop</span>
+              </p>
               <p className="text-[#6e5c50] text-[11px] font-sans mt-0.5">{slot.aspectHint}</p>
               <p className="text-[#c9b99f] text-[10px] font-sans mt-0.5">
                 Cropper will open to select area
@@ -209,6 +221,8 @@ function UploadBox({ slot, file, onUpload, onRemove }: UploadBoxProps) {
           imageSrc={cropSrc}
           aspectRatio={aspectRatio}
           slotLabel={slot.label}
+          polygon={slot.polygon}
+          slotBounds={{ x: slot.x, y: slot.y, w: slot.w, h: slot.h }}
           onConfirm={handleCropConfirm}
           onCancel={handleCropCancel}
         />

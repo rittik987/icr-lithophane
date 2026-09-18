@@ -23,7 +23,7 @@ export default function CustomizeHeader() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-40 backdrop-blur-md bg-[rgba(250,247,242,0.96)] border-b border-[#e5ddd0]">
-      <div className="relative flex items-center justify-between h-16 px-4 max-w-2xl mx-auto">
+      <div className="relative flex items-center justify-between h-16 px-4 max-w-2xl mx-auto lg:max-w-6xl lg:px-8">
         {/* Back arrow — left */}
         <button
           aria-label="Go back"

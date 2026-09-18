@@ -27,7 +27,7 @@ export default function StickyOrderBar({
   return (
     <aside
       aria-label="Order actions"
-      className="fixed bottom-0 left-0 right-0 z-40 backdrop-blur-md bg-[rgba(250,247,242,0.96)] border-t border-[#e5ddd0] shadow-[0_-4px_20px_rgba(46,30,18,0.08)] px-4 py-3"
+      className="fixed bottom-0 left-0 right-0 z-40 backdrop-blur-md bg-[rgba(250,247,242,0.96)] border-t border-[#e5ddd0] shadow-[0_-4px_20px_rgba(46,30,18,0.08)] px-4 py-3 lg:hidden"
       style={{ paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))" }}
     >
       <div className="flex items-center gap-3 max-w-lg mx-auto w-full">

@@ -95,7 +95,7 @@ export default function PreviewModal({
       aria-modal="true"
       aria-label="Lithophane preview"
     >
-      <div className="w-full max-w-lg bg-[#faf7f2] rounded-sm overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      <div className="w-full max-w-lg lg:max-w-3xl bg-[#faf7f2] rounded-sm overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
 
         {/* Modal header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#e5ddd0] shrink-0">

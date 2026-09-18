@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <!-- Background -->
+  <rect width="800" height="600" fill="#faf7f2" />
+
+  <!-- Outer frame border -->
+  <rect x="16" y="16" width="768" height="568" rx="6" fill="#fffdf8" stroke="#e5ddd0" stroke-width="2" />
+
+  <!-- 3mm inner safe margin (dashed, subtle) -->
+  <rect x="40" y="40" width="720" height="520" rx="3" fill="none" stroke="#d5c8b5" stroke-width="1.5" stroke-dasharray="6 6" />
+
+  <!-- Center Minimal Graphic -->
+  <g transform="translate(400, 260)" text-anchor="middle">
+    <!-- Clean Minimal Frame Icon -->
+    <rect x="-36" y="-60" width="72" height="56" rx="4" fill="none" stroke="#6e5c50" stroke-width="2.5" />
+    <circle cx="-16" cy="-42" r="5" fill="#6e5c50" />
+    <polyline points="-36,-16 -12,-36 12,-16" fill="none" stroke="#6e5c50" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+    <polyline points="0,-24 16,-38 36,-20" fill="none" stroke="#6e5c50" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Title -->
+    <text y="38" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="28" font-weight="600" fill="#2e1e12" letter-spacing="-0.3">
+      Custom Design
+    </text>
+
+    <!-- Subtitle with Dimensions -->
+    <text y="70" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="16" font-weight="500" fill="#8c786a">
+      20 × 15 cm · 8 × 6 in (4:3)
+    </text>
+  </g>
+</svg>

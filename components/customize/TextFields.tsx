@@ -30,15 +30,27 @@ export default function TextFields({ fields, values, onChange }: TextFieldsProps
             </label>
 
             <div className="relative">
-              <input
-                id={`text-field-${field.id}`}
-                type="text"
-                value={value}
-                maxLength={field.maxLength}
-                onChange={(e) => onChange(field.id, e.target.value)}
-                className="w-full bg-[#faf7f2] border border-[#e5ddd0] rounded-sm px-3.5 py-3 text-[#2e1e12] text-[14px] font-sans placeholder:text-[#c9b99f] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[rgba(224,122,40,0.15)] transition-all"
-                placeholder={field.defaultValue}
-              />
+              {field.multiline ? (
+                <textarea
+                  id={`text-field-${field.id}`}
+                  value={value}
+                  maxLength={field.maxLength}
+                  rows={3}
+                  onChange={(e) => onChange(field.id, e.target.value)}
+                  className="w-full bg-[#faf7f2] border border-[#e5ddd0] rounded-sm px-3.5 py-2.5 text-[#2e1e12] text-[14px] font-sans placeholder:text-[#c9b99f] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[rgba(224,122,40,0.15)] transition-all resize-none"
+                  placeholder={field.defaultValue}
+                />
+              ) : (
+                <input
+                  id={`text-field-${field.id}`}
+                  type="text"
+                  value={value}
+                  maxLength={field.maxLength}
+                  onChange={(e) => onChange(field.id, e.target.value)}
+                  className="w-full bg-[#faf7f2] border border-[#e5ddd0] rounded-sm px-3.5 py-3 text-[#2e1e12] text-[14px] font-sans placeholder:text-[#c9b99f] focus:outline-none focus:border-[#e07a28] focus:ring-2 focus:ring-[rgba(224,122,40,0.15)] transition-all"
+                  placeholder={field.defaultValue}
+                />
+              )}
             </div>
 
             {/* Character counter */}
