@@ -15,15 +15,71 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+const BASE_URL = "https://www.icrcustomcreations.in";
+
 export const metadata: Metadata = {
-  title: "ICR Custom Creations — Personalised Lithophane Lamps",
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: "Personalised 3D Photo Lithophane with Wooden Frame | ICR Custom Creations",
+    template: "%s | ICR Custom Creations",
+  },
   description:
-    "Transform your cherished photograph into a handcrafted wooden-framed lithophane lamp. Free pan-India delivery.",
+    "Turn your favorite photograph into a glowing 3D lithophane keepsake set in a handcrafted wooden frame. Perfect for anniversaries, birthdays & weddings. Free pan-India delivery.",
+  keywords: [
+    "custom 3d photo lamp",
+    "personalized lithophane lamp india",
+    "personalized anniversary gifts for couples",
+    "custom photo light frame",
+    "3d printed photo night light",
+    "wooden frame photo lamp",
+    "personalized wedding gifts",
+    "custom night lamp with photo",
+  ],
+  authors: [{ name: "ICR Custom Creations", url: BASE_URL }],
+  creator: "ICR Custom Creations",
+  publisher: "ICR Custom Creations",
+  formatDetection: {
+    telephone: true,
+    email: true,
+    address: true,
+  },
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
-    title: "ICR Custom Creations — Personalised Lithophane Lamps",
+    title: "Personalised 3D Photo Lithophane with Wooden Frame | ICR Custom Creations",
     description:
-      "Heirloom-quality 3D-printed photo lamps in a handcrafted wooden frame. Free pan-India delivery.",
+      "Turn your favorite photograph into a glowing 3D lithophane keepsake set in a handcrafted wooden frame. Handcrafted with warm 3000K LED illumination. Free delivery across India.",
+    url: BASE_URL,
+    siteName: "ICR Custom Creations",
+    locale: "en_IN",
     type: "website",
+    images: [
+      {
+        url: "/photos/detail-proportion.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Personalised 3D Photo Lithophane with Wooden Frame on Bedside Nightstand",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Personalised 3D Photo Lithophane with Wooden Frame | ICR Custom Creations",
+    description:
+      "Turn your favorite photograph into a glowing 3D lithophane keepsake set in a handcrafted wooden frame. Free delivery across India.",
+    images: ["/photos/detail-proportion.jpg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
   icons: {
     icon: [
@@ -35,6 +91,9 @@ export const metadata: Metadata = {
     apple: "/favicon/apple-touch-icon.png",
   },
   manifest: "/favicon/site.webmanifest",
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+  },
 };
 
 export default function RootLayout({
