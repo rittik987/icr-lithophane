@@ -52,8 +52,157 @@ export default async function HomePage() {
         ]
   ).map((item) => item.replace(/solid walnut/gi, "wooden"));
 
+  // ── Humanistic Schema.org Structured Data (Hoisted by React 19 into <head>) ──
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product?.name || "Personalised 3D Photo Lithophane with Wooden Frame",
+    image: [
+      "https://www.icrcustomcreations.in/photos/detail-proportion.jpg",
+      "https://www.icrcustomcreations.in/photos/detail-wooden-frame.jpg",
+      "https://www.icrcustomcreations.in/photos/detail-couple-lifestyle.png",
+    ],
+    description:
+      product?.description ||
+      "Turn your favorite photograph into a glowing 3D lithophane keepsake set in a handcrafted wooden frame. Equipped with warm 3000K LED illumination and dedicated DC power adapter. Includes free pan-India express delivery.",
+    brand: {
+      "@type": "Brand",
+      name: "ICR Custom Creations",
+    },
+    sku: product?.sku || "ICR-LITH-001",
+    offers: {
+      "@type": "Offer",
+      url: "https://www.icrcustomcreations.in",
+      priceCurrency: "INR",
+      price: sellingPrice.toString(),
+      priceValidUntil: "2027-12-31",
+      availability: "https://schema.org/InStock",
+      itemCondition: "https://schema.org/NewCondition",
+      shippingDetails: {
+        "@type": "OfferShippingDetails",
+        shippingRate: {
+          "@type": "MonetaryAmount",
+          value: "0",
+          currency: "INR",
+        },
+        shippingDestination: {
+          "@type": "DefinedRegion",
+          addressCountry: "IN",
+        },
+        deliveryTime: {
+          "@type": "ShippingDeliveryTime",
+          handlingTime: {
+            "@type": "QuantitativeValue",
+            minValue: 1,
+            maxValue: 2,
+            unitCode: "d",
+          },
+          transitTime: {
+            "@type": "QuantitativeValue",
+            minValue: 3,
+            maxValue: 5,
+            unitCode: "d",
+          },
+        },
+      },
+    },
+  };
+
+  const organizationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "ICR Custom Creations",
+    url: "https://www.icrcustomcreations.in",
+    logo: "https://www.icrcustomcreations.in/logo.png",
+    contactPoint: {
+      "@type": "ContactPoint",
+      telephone: "+91-9035765038",
+      contactType: "customer service",
+      email: "hello@icrcustomcreations.in",
+      areaServed: "IN",
+      availableLanguage: ["English", "Hindi"],
+    },
+  };
+
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "What type of photos work best?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "High-resolution photos with clear lighting and good contrast work best. Portraits of people and pets with defined facial features yield the most stunning 3D detail. Avoid photos that are blurry, heavily filtered, or have dark shadows over the face.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "What are the dimensions of the frame?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "The standard wooden frame measures approximately 8.5\" × 6.5\" × 1.8\" (approx. 21.5 cm × 16.5 cm × 4.5 cm). It is designed to sit comfortably on desks, nightstands, mantelpieces, and bookshelves.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "What material is the frame made of?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Each frame is handcrafted from premium natural wooden material, carefully sanded, stained, and finished with a protective wax for a warm, organic feel that complements any room decor.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "What kind of light is used?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "We use warm white, flicker-free LED lighting (3000K) with 90+ CRI. It provides an even, warm backlight that brings your photograph to life without any hot spots or glare.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "How is it powered?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "The lamp comes with a dedicated DC power adapter and cable. You can plug it into any standard wall outlet for safe, continuous illumination.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "How long does it take to make and deliver?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Each lithophane is custom 3D-printed and assembled by hand. Production takes 1–2 business days, followed by free pan-India express delivery in 3–5 business days with live tracking updates via WhatsApp and SMS.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "What if I'm not happy with the product?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "We take immense pride in our craftsmanship. If your lithophane arrives damaged or doesn't meet our strict quality standards, we will happily reprint and replace it free of charge or issue a full refund under our 100% Quality Guarantee.",
+        },
+      },
+    ],
+  };
+
   return (
     <>
+      {/* ── Structured Data for Google (Product, Organization, FAQPage) ── */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+
       {/* ── Fixed chrome ──────────────────────────────────────── */}
       <Header />
 
