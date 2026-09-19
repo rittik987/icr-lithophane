@@ -154,16 +154,16 @@ export default async function HomePage() {
           </div>
 
           {/* ── Desktop Hero (hidden on mobile) ─────────────── */}
-          <section className="hidden lg:block px-6 pt-8 pb-12">
-            <div className="grid grid-cols-[48fr_52fr] gap-8 items-start">
+          <section className="hidden lg:block px-6 lg:px-8 xl:px-10 pt-8 pb-12">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 xl:gap-12 items-start">
 
               {/* LEFT — Media gallery with thumbnail strip */}
-              <div className="sticky top-[76px]">
+              <div className="lg:col-span-6 min-w-0 sticky top-[84px]">
                 <MediaGalleryDesktop slides={slides} />
               </div>
 
               {/* RIGHT — Product purchase panel */}
-              <div className="flex flex-col gap-5">
+              <div className="lg:col-span-6 min-w-0 flex flex-col gap-5">
 
                 {/* Eyebrow + headline + description */}
                 <div className="flex flex-col gap-2 relative">
@@ -176,7 +176,7 @@ export default async function HomePage() {
                   <p className="text-[#6e5c50] text-[14px] font-sans leading-relaxed">
                     {(
                       product?.description ||
-                      "Transform your cherished photo into a warm-glowing 3D keepsake, handcrafted in a premium wooden frame."
+                      "Transform your cherished photo into a warm-glowing 3D art piece, handcrafted in a premium wooden frame."
                     ).replace(/solid walnut/gi, "wooden")}
                   </p>
                 </div>
@@ -225,8 +225,8 @@ export default async function HomePage() {
                   fullWidth
                 />
 
-                {/* What's included — 4-col icon chips (matches design) */}
-                <div className="grid grid-cols-4 gap-2">
+                {/* What's included — 4-col icon chips with comfortable padding */}
+                <div className="grid grid-cols-4 gap-2.5 pt-1">
                   {whatsIncluded.map((item, i) => {
                     const ICONS = [
                       // lithophane / frame
@@ -283,8 +283,8 @@ export default async function HomePage() {
         {/* Keepsake for Every Occasion / Bond (Warm Ivory #faf7f2) */}
         <KeepsakeOccasions />
 
-        {/* Customer reviews (Warm Ivory #faf7f2) */}
-        <ReviewsSection />
+        {/* Customer reviews (Warm Ivory #faf7f2) — Temporarily hidden until customer reviews arrive */}
+        {/* <ReviewsSection /> */}
 
         {/* Frequently Asked Questions (Warm Ivory #faf7f2) */}
         <FaqSection />
