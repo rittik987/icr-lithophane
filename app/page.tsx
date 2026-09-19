@@ -443,7 +443,7 @@ export default async function HomePage() {
         {/* Keepsake for Every Occasion / Bond (Warm Ivory #faf7f2) */}
         <KeepsakeOccasions />
 
-        {/* Customer reviews (Warm Ivory #faf7f2) — Temporarily hidden until customer reviews arrive */}
+        {/* Customer reviews (Warm Ivory #faf7f2) */}
         {/* <ReviewsSection /> */}
 
         {/* Frequently Asked Questions (Warm Ivory #faf7f2) */}
