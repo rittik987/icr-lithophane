@@ -16,7 +16,7 @@ interface HeaderProps {
 const DESKTOP_NAV_LINKS = [
   { label: "Home", href: "/" },
   { label: "How It Works", href: "/#how-it-works" },
-  { label: "Reviews", href: "/#reviews" },
+  // { label: "Reviews", href: "/#reviews" },
   { label: "Order", href: "/orders" },
   { label: "Contact Us", href: "/contact" },
 ];

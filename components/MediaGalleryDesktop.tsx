@@ -1,7 +1,7 @@
 "use client";
 
 import useEmblaCarousel from "embla-carousel-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Slide, DEFAULT_SLIDES } from "@/lib/slides";
 
@@ -24,6 +24,9 @@ export default function MediaGalleryDesktop({ className = "", slides }: MediaGal
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(true);
 
+  const thumbnailRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const thumbnailsContainerRef = useRef<HTMLDivElement | null>(null);
+
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
     setActiveIndex(emblaApi.selectedScrollSnap());
@@ -42,6 +45,21 @@ export default function MediaGalleryDesktop({ className = "", slides }: MediaGal
     };
   }, [emblaApi, onSelect]);
 
+  useEffect(() => {
+    const container = thumbnailsContainerRef.current;
+    const activeThumb = thumbnailRefs.current[activeIndex];
+    if (container && activeThumb) {
+      const containerWidth = container.offsetWidth;
+      const thumbLeft = activeThumb.offsetLeft;
+      const thumbWidth = activeThumb.offsetWidth;
+      const targetScrollLeft = thumbLeft - containerWidth / 2 + thumbWidth / 2;
+      container.scrollTo({
+        left: targetScrollLeft,
+        behavior: "smooth",
+      });
+    }
+  }, [activeIndex]);
+
   const scrollTo = useCallback((index: number) => {
     emblaApi?.scrollTo(index);
   }, [emblaApi]);
@@ -50,18 +68,18 @@ export default function MediaGalleryDesktop({ className = "", slides }: MediaGal
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
 
   return (
-    <div className={`flex flex-col gap-3 ${className}`}>
+    <div className={`flex flex-col gap-3 w-full min-w-0 ${className}`}>
 
       {/* ── Main image — Embla viewport ───────────────────── */}
       <div className="relative w-full rounded-xl overflow-hidden bg-[#f2ebdc] border border-[#e5ddd0] shadow-[0_8px_30px_rgba(46,30,18,0.12)]">
-        <div ref={emblaRef} className="overflow-hidden" style={{ touchAction: "pan-y" }}>
+        <div ref={emblaRef} className="overflow-hidden w-full min-w-0" style={{ touchAction: "pan-y" }}>
           <div className="flex" style={{ backfaceVisibility: "hidden" }}>
             {currentSlides.map((slide, index) => (
               <div
                 key={slide.id}
                 className="relative shrink-0 w-full"
-                /* Desktop landscape aspect ratio: 1.17 → height = 100/1.17 ≈ 85.47% */
-                style={{ paddingBottom: "85.47%" }}
+                /* 4:3 aspect ratio — matches mobile carousel & admin cropper (3/4 = 75%) */
+                style={{ paddingBottom: "75%" }}
               >
                 {slide.isVideo ? (
                   <video
@@ -131,22 +149,23 @@ export default function MediaGalleryDesktop({ className = "", slides }: MediaGal
         </div>
       </div>
 
-      {/* ── Thumbnail strip — dynamic count from API ──────── */}
+      {/* ── Thumbnail strip — horizontal scroll, single row (no wrap) ── */}
       {currentSlides.length > 1 && (
         <div
-          className="grid gap-2"
-          style={{
-            gridTemplateColumns: `repeat(${Math.min(currentSlides.length, 6)}, 1fr)`,
-          }}
+          ref={thumbnailsContainerRef}
+          className="relative flex items-center gap-2 overflow-x-auto py-1 px-0.5 w-full min-w-0 scroll-smooth [scrollbar-width:thin] [scrollbar-color:#d4c6b5_transparent] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#d4c6b5] [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-[#bfae9b]"
         >
           {currentSlides.map((slide, i) => (
             <button
               key={slide.id}
+              ref={(el) => {
+                thumbnailRefs.current[i] = el;
+              }}
               aria-label={`View ${slide.label}`}
               onClick={() => scrollTo(i)}
-              className={`relative rounded-lg overflow-hidden border-2 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e07a28] cursor-pointer ${
+              className={`relative shrink-0 w-[84px] rounded-lg overflow-hidden border-2 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e07a28] cursor-pointer ${
                 i === activeIndex
-                  ? "border-[#e07a28] shadow-[0_0_0_3px_rgba(224,122,40,0.12)]"
+                  ? "border-[#e07a28] shadow-[0_0_0_3px_rgba(224,122,40,0.12)] opacity-100"
                   : "border-transparent opacity-55 hover:opacity-85 hover:border-[#e5ddd0]"
               }`}
               style={{ aspectRatio: "4/3" }}
