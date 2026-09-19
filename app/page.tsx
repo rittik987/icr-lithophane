@@ -76,8 +76,19 @@ export default async function HomePage() {
       priceCurrency: "INR",
       price: sellingPrice.toString(),
       priceValidUntil: "2027-12-31",
+      validFrom: "2024-01-01",
       availability: "https://schema.org/InStock",
       itemCondition: "https://schema.org/NewCondition",
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        applicableCountry: "IN",
+        returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+        merchantReturnDays: 2,
+        returnMethod: "https://schema.org/ReturnByMail",
+        returnFees: "https://schema.org/FreeReturn",
+        returnPolicyCountry: "IN",
+        url: "https://www.icrcustomcreations.in/cancellation-refund-policy",
+      },
       shippingDetails: {
         "@type": "OfferShippingDetails",
         shippingRate: {
