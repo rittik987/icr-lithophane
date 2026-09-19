@@ -22,7 +22,7 @@ const DETAIL_SPECS: DetailSpecItem[] = [
       "A compact wooden frame measuring 20 × 15 × 4 cm, designed to sit beautifully on a desk, shelf, bedside table, or any special corner.",
     mobileDescription:
       "Overall frame size: 20 × 15 × 4 cm.",
-    imageSrc: "/photos/detail-wooden-frame.jpg",
+    imageSrc: "/photos/detail-wooden-frame.png",
     alt: "Personalised lithophane in a wooden frame",
     icon: (
       <svg
@@ -105,7 +105,7 @@ const DETAIL_SPECS: DetailSpecItem[] = [
       "The finished product weighs approximately 430 g.",
     mobileDescription:
       "Finished product weight: approximately 430 g.",
-    imageSrc: "/photos/detail-proportion.jpg",
+    imageSrc: "/photos/detail-proportion.png",
     alt: "Personalised lithophane frame",
     icon: (
       <svg

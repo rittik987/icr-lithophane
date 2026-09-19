@@ -284,7 +284,7 @@ export default async function HomePage() {
         <KeepsakeOccasions />
 
         {/* Customer reviews (Warm Ivory #faf7f2) */}
-        <ReviewsSection />
+        {/* <ReviewsSection /> */}
 
         {/* Frequently Asked Questions (Warm Ivory #faf7f2) */}
         <FaqSection />
