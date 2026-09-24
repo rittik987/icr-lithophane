@@ -624,7 +624,9 @@ export const orderApi = {
     paymentType?: "FULL_ONLINE" | "PARTIAL_COD";
     cartItemId?: string;
     cartItemIds?: string[];
+    partnerLinkCode?: string; // link-based partner attribution from sessionStorage
   }) {
+
     return apiRequest<{ order: ServerOrder; razorpay: RazorpayOrderDetails }>("/orders", {
       method: "POST",
       body: JSON.stringify(data),
