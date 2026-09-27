@@ -26,9 +26,22 @@ export default function TermsAndConditionsPage() {
             className="flex items-center gap-1.5 text-[#6e5c50] hover:text-[#2e1e12] font-sans text-sm font-medium transition-colors z-10 cursor-pointer"
             aria-label="Go back"
           >
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-              <path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 20 20"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M12.5 15L7.5 10L12.5 5"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
+
             <span>Back</span>
           </button>
 
@@ -46,7 +59,6 @@ export default function TermsAndConditionsPage() {
                 sizes="96px"
                 className="object-contain object-center"
                 priority
-                loading="eager"
               />
             </Link>
           </div>
@@ -58,109 +70,391 @@ export default function TermsAndConditionsPage() {
       {/* Main content */}
       <main className="pt-24 pb-20 max-w-3xl mx-auto px-4 sm:px-6 flex-1 w-full">
         <span className="text-xs font-bold uppercase tracking-widest text-[#e07a28] font-sans">
-          Agreement &amp; Terms of Service
+          Website Terms
         </span>
+
         <h1 className="text-3xl sm:text-4xl font-serif font-bold text-[#2e1e12] mt-1 mb-3">
           Terms &amp; Conditions
         </h1>
+
         <p className="text-xs text-[#6e5c50] font-sans mb-8">
-          Last updated: September 2026 • ICR Custom Creations Private Limited
+          Last updated: September 2026 • Please read these terms carefully
         </p>
 
         <div className="flex flex-col gap-6 text-sm leading-relaxed font-sans text-[#4a3b30] bg-white border border-[#e5ddd0] rounded-2xl p-6 sm:p-8 shadow-sm">
           {/* Section 1 */}
           <section className="flex flex-col gap-2">
             <h2 className="text-base font-serif font-bold text-[#2e1e12]">
-              1. Acceptance of Terms
+              1. About ICR Custom Creations
             </h2>
+
             <p>
-              Welcome to <strong>ICR Custom Creations</strong> (<a href="https://www.icrcustomcreations.in" className="text-[#e07a28] underline">icrcustomcreations.in</a>). By accessing or using this website, placing an order, or utilizing our custom manufacturing services, you agree to be bound by these Terms and Conditions and our associated Privacy Policy, Shipping Policy, and Cancellation/Refund Policy.
+              These Terms &amp; Conditions govern your use of the ICR Custom
+              Creations website and your purchase of products through the
+              website.
+            </p>
+
+            <p>
+              In these terms, <strong>“ICR Custom Creations”</strong>,{" "}
+              <strong>“we”</strong>, <strong>“us”</strong>, and{" "}
+              <strong>“our”</strong> refer to ICR Custom Creations.{" "}
+              <strong>“You”</strong> and <strong>“customer”</strong> refer to
+              the person using the website or placing an order.
             </p>
           </section>
 
           {/* Section 2 */}
           <section className="flex flex-col gap-2 border-t border-[#f2ebdc] pt-5">
             <h2 className="text-base font-serif font-bold text-[#2e1e12]">
-              2. Personalized &amp; Custom-Manufactured Products
+              2. Personalised Products
             </h2>
+
             <p>
-              Every lithophane lamp produced by ICR Custom Creations is an individually manufactured, customized physical product rendered from a customer-supplied photograph and text engraving.
+              ICR Custom Creations sells personalised 3D lithophane products
+              created using photos or photo designs submitted by customers.
             </p>
+
+            <p>
+              Customers may use the available templates, upload a single
+              photo, or create a collage where supported by the selected
+              template.
+            </p>
+
             <p className="text-xs text-[#6e5c50]">
-              Due to the personalized nature of additive manufacturing (3D printing and wood curing), an order cannot be cancelled, modified, or refunded once it enters the active production queue (past the 2-hour post-order grace period).
+              Because each product is personalised specifically for the
+              customer, the product may not be suitable for cancellation,
+              refund, or replacement in situations covered by the applicable
+              policies.
             </p>
           </section>
 
           {/* Section 3 */}
           <section className="flex flex-col gap-2 border-t border-[#f2ebdc] pt-5">
             <h2 className="text-base font-serif font-bold text-[#2e1e12]">
-              3. Customer Content &amp; Photograph Warranty
+              3. Customer Responsibility for Customisation
             </h2>
+
             <p>
-              When uploading photographs, text, or artwork to our customization studio:
+              Customers are responsible for reviewing their selected template,
+              uploaded photo, collage, text, and other customisation details
+              before placing an order.
             </p>
-            <ul className="list-disc list-inside space-y-1 text-xs text-[#6e5c50] ml-1">
-              <li>You warrant that you own the rights to the uploaded photograph or have acquired explicit authorization from the copyright holder.</li>
-              <li>You agree not to upload content that is defamatory, obscene, pornographic, promoting violence, hate speech, or infringing upon any third party’s intellectual property rights.</li>
-              <li>We reserve the right to decline manufacturing any order containing inappropriate content and issue a full refund.</li>
-            </ul>
+
+            <p className="text-xs text-[#6e5c50]">
+              ICR Custom Creations is responsible for correcting or replacing a
+              product when the customisation error was made by us, subject to
+              the applicable Replacement Policy.
+            </p>
           </section>
 
           {/* Section 4 */}
           <section className="flex flex-col gap-2 border-t border-[#f2ebdc] pt-5">
             <h2 className="text-base font-serif font-bold text-[#2e1e12]">
-              4. Orders, Pricing &amp; Payments
+              4. Customer-Submitted Content
             </h2>
+
             <p>
-              All prices listed on the website are in Indian Rupees (INR) and are inclusive of Goods &amp; Services Tax (GST). Payments are securely captured through RBI-authorized payment partner <strong>Razorpay</strong>.
+              Customers must have the right to use the photographs, images,
+              text, or other content they submit for personalisation.
             </p>
+
+            <p>
+              Customers must not submit content that is unlawful, fraudulent,
+              abusive, or infringes the rights of another person or
+              organisation.
+            </p>
+
             <p className="text-xs text-[#6e5c50]">
-              In the event of an erroneous pricing display caused by technical glitch, ICR Custom Creations reserves the right to notify the customer and cancel the affected order with a full refund.
+              ICR Custom Creations may refuse an order where the submitted
+              content creates a legal, safety, or operational concern.
             </p>
           </section>
 
           {/* Section 5 */}
           <section className="flex flex-col gap-2 border-t border-[#f2ebdc] pt-5">
             <h2 className="text-base font-serif font-bold text-[#2e1e12]">
-              5. Shipping, Delivery &amp; Transit Damage
+              5. Orders &amp; Payment
             </h2>
+
             <p>
-              Estimated delivery times (3–7 business days) are guidelines provided by third-party courier services. While we take every effort to ensure timely delivery, courier transit delays during extreme weather or national holidays may occur.
+              An order is considered successfully placed once the applicable
+              payment or required advance payment has been successfully
+              completed and the order has been accepted by ICR Custom
+              Creations.
             </p>
+
+            <p>
+              Available payment options and pricing are described in our{" "}
+              <Link
+                href="/pricing-policy"
+                className="text-[#e07a28] underline"
+              >
+                Pricing Policy
+              </Link>
+              .
+            </p>
+
             <p className="text-xs text-[#6e5c50]">
-              We provide a <strong>100% Free Replacement Guarantee</strong> for items damaged during courier transit, provided proof of damage is submitted within 48 hours of delivery as outlined in our Cancellation/Refund Policy.
+              Partial Cash on Delivery requires the applicable advance payment
+              stated in the Pricing Policy.
             </p>
           </section>
 
           {/* Section 6 */}
           <section className="flex flex-col gap-2 border-t border-[#f2ebdc] pt-5">
             <h2 className="text-base font-serif font-bold text-[#2e1e12]">
-              6. Limitation of Liability
+              6. Pricing
             </h2>
-            <p className="text-xs text-[#6e5c50]">
-              To the maximum extent permitted by Indian law, ICR Custom Creations and its directors shall not be liable for any indirect, incidental, or consequential damages resulting from the use or inability to use our services. Our total liability for any claim arising out of a purchase is strictly capped at the total amount paid by the customer for that specific order.
+
+            <p>
+              Product prices are displayed on the website and are subject to
+              the pricing terms applicable at the time an order is placed.
+            </p>
+
+            <p>
+              Current pricing, GST treatment, prepaid shipping, partial COD,
+              and applicable delivery charges are described in our{" "}
+              <Link
+                href="/pricing-policy"
+                className="text-[#e07a28] underline"
+              >
+                Pricing Policy
+              </Link>
+              .
             </p>
           </section>
 
           {/* Section 7 */}
           <section className="flex flex-col gap-2 border-t border-[#f2ebdc] pt-5">
             <h2 className="text-base font-serif font-bold text-[#2e1e12]">
-              7. Governing Law &amp; Jurisdiction
+              7. Shipping &amp; Delivery
             </h2>
+
             <p>
-              These Terms and Conditions and any transactions concluded via this website shall be governed and construed in accordance with the laws of the Republic of India. Any disputes arising hereunder shall be subject to the exclusive jurisdiction of the competent courts in <strong>Bangalore, Karnataka, India</strong>.
+              Orders are delivered according to our current Shipping &amp;
+              Delivery Policy.
+            </p>
+
+            <p>
+              For current delivery timelines, delivery coverage, prepaid
+              shipping, and partial COD delivery charges, please refer to our{" "}
+              <Link
+                href="/shipping-policy"
+                className="text-[#e07a28] underline"
+              >
+                Shipping &amp; Delivery Policy
+              </Link>
+              .
             </p>
           </section>
 
           {/* Section 8 */}
           <section className="flex flex-col gap-2 border-t border-[#f2ebdc] pt-5">
             <h2 className="text-base font-serif font-bold text-[#2e1e12]">
-              8. Contacting Us Regarding Terms
+              8. Cancellation &amp; Refunds
             </h2>
+
+            <p>
+              Because our products are personalised, cancellation and refund
+              eligibility depends on the production stage of the order.
+            </p>
+
+            <p>
+              The applicable cancellation deductions and refund rules are
+              described in our{" "}
+              <Link
+                href="/cancellation-refund-replacement-policy"
+                className="text-[#e07a28] underline"
+              >
+                Cancellation, Refund &amp; Replacement Policy
+              </Link>
+              .
+            </p>
+          </section>
+
+          {/* Section 9 */}
+          <section className="flex flex-col gap-2 border-t border-[#f2ebdc] pt-5">
+            <h2 className="text-base font-serif font-bold text-[#2e1e12]">
+              9. Product Replacement
+            </h2>
+
+            <p>
+              Eligible products may be replaced when they arrive damaged, are
+              defective, or contain a customisation error made by ICR Custom
+              Creations, subject to the applicable replacement terms.
+            </p>
+
+            <p>
+              Please refer to our{" "}
+              <Link
+                href="/cancellation-refund-replacement-policy"
+                className="text-[#e07a28] underline"
+              >
+                Cancellation, Refund &amp; Replacement Policy
+              </Link>{" "}
+              for eligibility, documentation, timelines, and replacement
+              procedures.
+            </p>
+          </section>
+
+          {/* Section 10 */}
+          {/* <section className="flex flex-col gap-2 border-t border-[#f2ebdc] pt-5">
+            <h2 className="text-base font-serif font-bold text-[#2e1e12]">
+              10. Electronic Warranty
+            </h2>
+
+            <p>
+              ICR Custom Creations provides a limited warranty for the
+              electronic lighting components of the product as described in
+              the applicable warranty terms.
+            </p>
+
+            <p className="text-xs text-[#6e5c50]">
+              The warranty applies to eligible electronic manufacturing defects
+              and is separate from the product replacement and cancellation
+              policies.
+            </p>
+          </section> */}
+
+          {/* Section 11 */}
+          <section className="flex flex-col gap-2 border-t border-[#f2ebdc] pt-5">
+            <h2 className="text-base font-serif font-bold text-[#2e1e12]">
+              10. Website Use
+            </h2>
+
+            <p>
+              Customers must use the website lawfully and must not attempt to
+              interfere with, disrupt, damage, or gain unauthorised access to
+              the website, its systems, or its services.
+            </p>
+
+            <p className="text-xs text-[#6e5c50]">
+              Website content, design, images, branding, text, graphics, and
+              other materials may not be copied, reproduced, or commercially
+              reused without appropriate permission.
+            </p>
+          </section>
+
+          {/* Section 12 */}
+          <section className="flex flex-col gap-2 border-t border-[#f2ebdc] pt-5">
+            <h2 className="text-base font-serif font-bold text-[#2e1e12]">
+              11. Product Images &amp; Representation
+            </h2>
+
+            <p>
+              Product images and previews are intended to represent the
+              product and its customisation possibilities. Because each product
+              is personalised using customer-submitted content, the final
+              appearance may vary according to the submitted image, selected
+              template, and customisation.
+            </p>
+          </section>
+
+          {/* Section 13 */}
+          <section className="flex flex-col gap-2 border-t border-[#f2ebdc] pt-5">
+            <h2 className="text-base font-serif font-bold text-[#2e1e12]">
+              12. Policy References
+            </h2>
+
+            <p>
+              The following policies form part of the information governing
+              your use of the website and purchase experience:
+            </p>
+
+            <ul className="list-disc list-inside space-y-1.5 text-xs text-[#6e5c50] ml-1">
+              <li>
+                <Link
+                  href="/pricing-policy"
+                  className="text-[#e07a28] underline"
+                >
+                  Pricing Policy
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  href="/shipping-policy"
+                  className="text-[#e07a28] underline"
+                >
+                  Shipping &amp; Delivery Policy
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  href="/cancellation-refund-replacement-policy"
+                  className="text-[#e07a28] underline"
+                >
+                  Cancellation, Refund &amp; Replacement Policy
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  href="/privacy-policy"
+                  className="text-[#e07a28] underline"
+                >
+                  Privacy Policy
+                </Link>
+              </li>
+            </ul>
+          </section>
+
+          {/* Section 14 */}
+          <section className="flex flex-col gap-2 border-t border-[#f2ebdc] pt-5">
+            <h2 className="text-base font-serif font-bold text-[#2e1e12]">
+              13. Changes to These Terms
+            </h2>
+
+            <p>
+              ICR Custom Creations may update these Terms &amp; Conditions from
+              time to time to reflect changes to our products, services,
+              policies, or website.
+            </p>
+
+            <p className="text-xs text-[#6e5c50]">
+              The latest version published on this website will apply to future
+              website use and orders.
+            </p>
+          </section>
+
+          {/* Section 15 */}
+          <section className="flex flex-col gap-2 border-t border-[#f2ebdc] pt-5">
+            <h2 className="text-base font-serif font-bold text-[#2e1e12]">
+              14. Contact Us
+            </h2>
+
+            <p className="text-xs text-[#6e5c50]">
+              For questions regarding these Terms &amp; Conditions, please
+              contact ICR Custom Creations:
+            </p>
+
             <div className="bg-[#faf7f2] p-4 rounded-xl border border-[#e5ddd0] text-xs">
-              <p className="font-semibold text-[#2e1e12]">ICR Custom Creations - Legal &amp; Compliance</p>
-              <p className="text-[#6e5c50]">Bannerghatta Road, Bangalore, Karnataka, 560068</p>
-              <p className="text-[#6e5c50] mt-1">Email: <a href="mailto:hello@icrcustomcreations.in" className="text-[#e07a28] underline">hello@icrcustomcreations.in</a></p>
+              <p className="font-semibold text-[#2e1e12]">
+                ICR Custom Creations
+              </p>
+
+              <p className="text-[#6e5c50]">
+                Email:{" "}
+                <a
+                  href="mailto:support@icrcustomcreations.in"
+                  className="text-[#e07a28] underline"
+                >
+                  support@icrcustomcreations.in
+                </a>
+              </p>
+
+              <p className="text-[#6e5c50]">
+                WhatsApp:{" "}
+                <a
+                  href="https://wa.me/919035765038"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#e07a28] underline"
+                >
+                  +91 9035765038
+                </a>
+              </p>
             </div>
           </section>
         </div>

@@ -71,8 +71,8 @@ html {
   /* ── Hero image aspect ratios (tied to the 8×6 lamp frame) ─ */
   /* Mobile portrait  0.82 → padding-bottom trick: 100/0.82 ≈ 121.95% */
   --hero-aspect-mobile-pb: 121.95%;
-  /* Desktop landscape 1.17 → padding-bottom trick: 100/1.17 ≈ 85.47% */
-  --hero-aspect-desktop-pb: 85.47%;
+  /* Desktop landscape 4:3 → padding-bottom trick: (3/4) * 100% = 75% */
+  --hero-aspect-desktop-pb: 75%;
 }
 
 body {

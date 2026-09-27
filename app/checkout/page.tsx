@@ -620,6 +620,12 @@ function CheckoutContent() {
         await syncCartWithServer(items, true);
       }
 
+      // Read partner referral code from session (set by ReferralTracker when ?ref=CODE link was visited)
+      let partnerLinkCode: string | undefined;
+      try {
+        partnerLinkCode = sessionStorage.getItem("icr_ref") ?? undefined;
+      } catch {}
+
       const createRes = await orderApi.createOrder({
         addressId: effectiveAddressId,
         inlineAddress: !effectiveAddressId
@@ -638,7 +644,9 @@ function CheckoutContent() {
         paymentMethod: "upi",
         paymentType: selectedPaymentModel,
         cartItemId: isExpressBuyNow && buyNowItem ? (buyNowItem.serverItemId || buyNowItem.templateId) : undefined,
+        partnerLinkCode, // backend ignores this if couponCode is set (mutual exclusion prevents double attribution)
       });
+
 
       if (!createRes.success || !createRes.data) {
         setErrorMessage(createRes.error || "Failed to initialize order. Please try again.");

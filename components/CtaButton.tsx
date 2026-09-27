@@ -1,20 +1,25 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface CtaButtonProps {
   label: string;
+  loadingLabel?: string;
   href?: string;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent) => void;
   size?: "sm" | "md" | "lg";
   fullWidth?: boolean;
   className?: string;
   type?: "button" | "submit";
   disabled?: boolean;
+  loading?: boolean;
 }
 
 export default function CtaButton({
   label,
+  loadingLabel,
   href,
   onClick,
   size = "md",
@@ -22,11 +27,39 @@ export default function CtaButton({
   className = "",
   type = "button",
   disabled = false,
+  loading: externalLoading,
 }: CtaButtonProps) {
+  const [internalLoading, setInternalLoading] = useState(false);
+  const pathname = usePathname();
+
+  // Reset loading state when route changes
+  useEffect(() => {
+    setInternalLoading(false);
+  }, [pathname]);
+
+  const isLoading = externalLoading ?? internalLoading;
+
   const sizeStyles: Record<string, string> = {
-    sm: "px-4 py-2.5 text-[8px] gap-1.5 rounded-sm",
+    sm: "px-4 py-2.5 text-[11px] gap-1.5 rounded-sm",
     md: "px-6 py-3.5 text-[13px] gap-2 rounded-lg",
-    lg: "px-7 py-4 text-[14px] gap-2 rounded-xl",
+    lg: "px-7 py-4 text-[14px] gap-2.5 rounded-xl",
+  };
+
+  const spinnerSizes: Record<string, string> = {
+    sm: "w-3.5 h-3.5 border-[2px]",
+    md: "w-4 h-4 border-2",
+    lg: "w-4 h-4 border-2",
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isLoading || disabled) {
+      e.preventDefault();
+      return;
+    }
+    if (href) {
+      setInternalLoading(true);
+    }
+    onClick?.(e);
   };
 
   const base = [
@@ -40,11 +73,20 @@ export default function CtaButton({
     "focus-visible:outline-2 focus-visible:outline-[#e07a28] focus-visible:outline-offset-2",
     sizeStyles[size],
     fullWidth ? "w-full" : "",
-    disabled ? "opacity-60 pointer-events-none" : "",
+    disabled || isLoading ? "pointer-events-none opacity-90 cursor-wait" : "",
     className,
   ]
     .filter(Boolean)
     .join(" ");
+
+  const Spinner = (
+    <span
+      className={`inline-block rounded-full border-white/30 border-t-white animate-spin shrink-0 ${
+        spinnerSizes[size] || "w-4 h-4 border-2"
+      }`}
+      aria-hidden="true"
+    />
+  );
 
   const ArrowIcon = (
     <svg
@@ -63,19 +105,30 @@ export default function CtaButton({
     </svg>
   );
 
+  const content = (
+    <>
+      {isLoading && Spinner}
+      <span>{isLoading ? loadingLabel || label : label}</span>
+      {!isLoading && ArrowIcon}
+    </>
+  );
+
   if (href) {
     return (
-      <Link href={href} className={base}>
-        <span>{label}</span>
-        {ArrowIcon}
+      <Link href={href} onClick={handleClick} className={base}>
+        {content}
       </Link>
     );
   }
 
   return (
-    <button type={type} onClick={onClick} disabled={disabled} className={base}>
-      <span>{label}</span>
-      {ArrowIcon}
+    <button
+      type={type}
+      onClick={handleClick}
+      disabled={disabled || isLoading}
+      className={base}
+    >
+      {content}
     </button>
   );
 }

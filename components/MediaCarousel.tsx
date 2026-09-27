@@ -62,8 +62,8 @@ export default function MediaCarousel({ className = "", slides, product }: Media
             <div
               key={slide.id}
               className="relative shrink-0 w-full"
-              /* Mobile portrait aspect ratio: 0.82 → height = 100/0.82 ≈ 122% */
-              style={{ paddingBottom: "121.95%" }}
+              /* 4:3 aspect ratio — matches desktop gallery & admin cropper (no crop on either device) */
+              style={{ paddingBottom: "75%" }}
             >
               {slide.isVideo ? (
                 <video

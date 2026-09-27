@@ -64,10 +64,13 @@ export default function TemplateSelector({
             </p>
             {/* Slot count */}
             <p className="text-[#6e5c50] text-[11px] font-sans">
-              {template.photoSlots.length} photo{template.photoSlots.length > 1 ? "s" : ""}
-              {template.textFields.length > 0
-                ? ` · ${template.textFields.length} text field${template.textFields.length > 1 ? "s" : ""}`
-                : ""}
+              {template.id === "custom-design"
+                ? "20 × 15 cm · 8 × 6 in · Custom artwork"
+                : `${template.photoSlots.length} photo${template.photoSlots.length > 1 ? "s" : ""}${
+                    template.textFields.length > 0
+                      ? ` · ${template.textFields.length} text field${template.textFields.length > 1 ? "s" : ""}`
+                      : ""
+                  }`}
             </p>
           </div>
         </div>
