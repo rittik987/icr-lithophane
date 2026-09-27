@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Drawer } from "vaul";
 import { TemplateConfig } from "@/lib/templates";
 
@@ -60,6 +61,49 @@ function LayoutThumb({ template }: { template: TemplateConfig }) {
   );
 }
 
+function DesignGrid({
+  templates,
+  selectedId,
+  onSelect,
+}: {
+  templates: TemplateConfig[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {templates.map((t) => {
+        const isSelected = t.id === selectedId;
+        return (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => onSelect(t.id)}
+            className={`relative flex flex-col rounded-sm overflow-hidden border-2 text-left transition-all active:scale-[0.97] ${
+              isSelected
+                ? "border-[#e07a28] shadow-[0_0_0_3px_rgba(224,122,40,0.12)]"
+                : "border-[#e5ddd0] hover:border-[#c9b99f]"
+            }`}
+          >
+            <LayoutThumb template={t} />
+            {isSelected && (
+              <div className="absolute top-2 right-2 w-6 h-6 bg-[#e07a28] rounded-full flex items-center justify-center shadow-md">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                  <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            )}
+            <div className="px-3 py-2.5 bg-white flex flex-col gap-0.5">
+              <p className="text-[#2e1e12] text-[13px] font-semibold font-sans truncate">{t.shortLabel}</p>
+              <p className="text-[#6e5c50] text-[11px] font-sans">{t.occasion}</p>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function TemplateBottomSheet({
   open,
   onClose,
@@ -67,61 +111,79 @@ export default function TemplateBottomSheet({
   selectedId,
   onSelect,
 }: TemplateBottomSheetProps) {
+  const [isLaptop, setIsLaptop] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsLaptop(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
   return (
-    <Drawer.Root open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Drawer.Root
+      open={open}
+      direction={isLaptop ? "right" : "bottom"}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50" />
         <Drawer.Content
-          className="fixed bottom-0 left-1/2 z-50 flex w-full max-w-lg -translate-x-1/2 flex-col bg-[#faf7f2] rounded-t-2xl border-t border-[#e5ddd0] shadow-2xl max-h-[80vh]"
+          className={
+            isLaptop
+              ? "fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-md flex-col bg-[#faf7f2] border-l border-[#e5ddd0] shadow-2xl"
+              : "fixed bottom-0 left-1/2 z-50 flex w-full max-w-lg -translate-x-1/2 flex-col bg-[#faf7f2] rounded-t-2xl border-t border-[#e5ddd0] shadow-2xl max-h-[80vh]"
+          }
           style={{ outline: "none" }}
         >
-          <div className="flex justify-center pt-3 pb-2 shrink-0">
-            <div className="w-10 h-1 bg-[#c9b99f] rounded-full" />
-          </div>
-
-          <div className="px-5 pb-3 border-b border-[#e5ddd0] shrink-0">
-            <h2
-              className="text-[#2e1e12] text-[18px] font-semibold"
-              style={{ fontFamily: "var(--font-family-serif)" }}
-            >
-              Pick a ready design
-            </h2>
-            <p className="text-[#6e5c50] text-[13px] font-sans mt-0.5">
-              Empty boxes are for photos. Tap a box, then crop to fit.
-            </p>
-          </div>
+          {isLaptop ? (
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#e5ddd0] shrink-0">
+              <div>
+                <h2
+                  className="text-[#2e1e12] text-[18px] font-semibold"
+                  style={{ fontFamily: "var(--font-family-serif)" }}
+                >
+                  Pick a ready design
+                </h2>
+                <p className="text-[#6e5c50] text-[13px] font-sans mt-0.5">
+                  Empty boxes are for photos. Tap a box, then crop to fit.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close ready designs"
+                className="w-9 h-9 flex items-center justify-center rounded-sm hover:bg-[#f2ebdc]"
+              >
+                <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                  <path d="M4.5 4.5l9 9M13.5 4.5l-9 9" stroke="#2e1e12" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-center pt-3 pb-2 shrink-0">
+                <div className="w-10 h-1 bg-[#c9b99f] rounded-full" />
+              </div>
+              <div className="px-5 pb-3 border-b border-[#e5ddd0] shrink-0">
+                <h2
+                  className="text-[#2e1e12] text-[18px] font-semibold"
+                  style={{ fontFamily: "var(--font-family-serif)" }}
+                >
+                  Pick a ready design
+                </h2>
+                <p className="text-[#6e5c50] text-[13px] font-sans mt-0.5">
+                  Empty boxes are for photos. Tap a box, then crop to fit.
+                </p>
+              </div>
+            </>
+          )}
 
           <div className="overflow-y-auto flex-1 px-4 py-4">
-            <div className="grid grid-cols-2 gap-3">
-              {templates.map((t) => {
-                const isSelected = t.id === selectedId;
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => onSelect(t.id)}
-                    className={`relative flex flex-col rounded-sm overflow-hidden border-2 text-left transition-all active:scale-[0.97] ${
-                      isSelected
-                        ? "border-[#e07a28] shadow-[0_0_0_3px_rgba(224,122,40,0.12)]"
-                        : "border-[#e5ddd0] hover:border-[#c9b99f]"
-                    }`}
-                  >
-                    <LayoutThumb template={t} />
-                    {isSelected && (
-                      <div className="absolute top-2 right-2 w-6 h-6 bg-[#e07a28] rounded-full flex items-center justify-center shadow-md">
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                          <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </div>
-                    )}
-                    <div className="px-3 py-2.5 bg-white flex flex-col gap-0.5">
-                      <p className="text-[#2e1e12] text-[13px] font-semibold font-sans truncate">{t.shortLabel}</p>
-                      <p className="text-[#6e5c50] text-[11px] font-sans">{t.occasion}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            <DesignGrid templates={templates} selectedId={selectedId} onSelect={onSelect} />
             <div className="h-6" />
           </div>
         </Drawer.Content>
