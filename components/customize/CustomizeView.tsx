@@ -346,8 +346,8 @@ export default function CustomizeView({ initialProduct }: CustomizeViewProps) {
     <div className="h-[100dvh] bg-[#faf7f2] flex flex-col overflow-hidden">
       <CustomizeHeader />
 
-      <div className="flex-1 min-h-0 flex flex-col pt-16 w-full max-w-lg mx-auto lg:max-w-2xl">
-        <div className="shrink-0 px-4 lg:px-8 flex flex-col gap-2.5 pt-3">
+      <div className="flex-1 min-h-0 flex flex-col pt-16 w-full max-w-lg mx-auto lg:max-w-[1180px] lg:flex-row lg:items-stretch lg:gap-0">
+        <div className="shrink-0 px-4 flex flex-col gap-2.5 pt-3 lg:flex-1 lg:min-w-0 lg:justify-center lg:px-8 lg:pt-5 lg:pb-5">
           <div className="flex items-end justify-between gap-3">
             <div>
               <h1 className="font-serif text-[20px] text-[#2e1e12] leading-tight">Put your photo on the lamp</h1>
@@ -470,7 +470,7 @@ export default function CustomizeView({ initialProduct }: CustomizeViewProps) {
         </div>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 lg:px-8 pb-28 flex flex-col gap-4 pt-3">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-28 flex flex-col gap-4 pt-3 lg:w-[420px] lg:max-w-[420px] lg:flex-none lg:px-8 lg:pt-5 lg:pb-5 lg:border-l lg:border-[#e5ddd0] lg:bg-[#fffdf8]">
         <ol className="flex items-center gap-2 text-[11px] font-sans font-semibold">
           <li className={`flex-1 text-center py-1.5 rounded-sm ${photos.length === 0 ? "bg-[#e07a28] text-white" : "bg-[#eaf5ec] text-[#1e7234]"}`}>
             1. Photo
@@ -735,6 +735,27 @@ export default function CustomizeView({ initialProduct }: CustomizeViewProps) {
           >
             See how the lamp will look
           </button>
+        )}
+
+        {isOrderReady && (
+          <div className="hidden lg:flex items-center gap-3 pt-1">
+            <button
+              type="button"
+              disabled={isAddingToCart || isPlacingOrder}
+              onClick={() => handleAddToCart()}
+              className="flex-1 h-12 rounded-sm font-semibold font-sans text-[14px] border border-[#1a1412] text-[#1a1412] hover:bg-[#1a1412]/5 cursor-pointer disabled:opacity-50"
+            >
+              {isAddingToCart ? "Adding..." : "Add to Cart"}
+            </button>
+            <button
+              type="button"
+              disabled={isAddingToCart || isPlacingOrder}
+              onClick={() => handlePlaceOrder()}
+              className="flex-1 h-12 rounded-sm font-semibold font-sans text-[14px] bg-[#e07a28] hover:bg-[#c96a1f] text-white cursor-pointer disabled:opacity-50"
+            >
+              {isPlacingOrder ? "Please wait..." : "Buy Now"}
+            </button>
+          </div>
         )}
         </div>
       </div>
