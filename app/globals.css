@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Dancing+Script:wght@600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,700;1,500;1,700&family=Dancing+Script:wght@600;700&family=Great+Vibes&family=Oswald:wght@400;600&family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap");
 @import "tailwindcss";
 
 /* ── Tailwind v4 Theme Configuration ──────────────────────── */
@@ -118,6 +118,63 @@ button {
   );
   background-size: 800px 100%;
   animation: shimmer 1.4s ease-in-out infinite;
+}
+
+/* Brown wooden laminate — the real frame wood */
+.icr-laminate,
+.icr-laminate-v {
+  background-color: #8a5a38;
+  background-image: url("/photos/wood-laminate.png?v=3");
+  background-size: cover;
+  background-position: center;
+}
+.icr-laminate-v {
+  background-size: cover;
+  background-position: 40% center;
+}
+
+/* Finger-friendly size line on customize */
+.icr-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 32px;
+  margin: 0;
+  background: transparent;
+  outline: none;
+  touch-action: none;
+  accent-color: #e07a28;
+}
+.icr-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #e5ddd0;
+}
+.icr-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  margin-top: -11px;
+  border-radius: 999px;
+  background: #e07a28;
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(46, 30, 18, 0.22);
+  cursor: pointer;
+}
+.icr-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #e5ddd0;
+}
+.icr-slider::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: #e07a28;
+  box-shadow: 0 1px 4px rgba(46, 30, 18, 0.22);
+  cursor: pointer;
 }
 
 /* Accessibility */

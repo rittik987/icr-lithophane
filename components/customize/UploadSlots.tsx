@@ -94,9 +94,6 @@ function UploadBox({ slot, file, onUpload, onRemove }: UploadBoxProps) {
     setCropRawFile(null);
   }
 
-  // Aspect ratio from slot dimensions (w/h)
-  const aspectRatio = slot.w / slot.h;
-
   return (
     <>
       <div className="bg-white border border-[#e5ddd0] rounded-sm overflow-hidden shadow-sm">
@@ -207,8 +204,6 @@ function UploadBox({ slot, file, onUpload, onRemove }: UploadBoxProps) {
       {cropSrc && (
         <CropperModal
           imageSrc={cropSrc}
-          aspectRatio={aspectRatio}
-          slotLabel={slot.label}
           onConfirm={handleCropConfirm}
           onCancel={handleCropCancel}
         />

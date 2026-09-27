@@ -16,25 +16,19 @@ export async function getCroppedImageFile(
   fileName = "cropped.jpg"
 ): Promise<File> {
   const image = await loadImage(imageSrc);
+  const x = Math.max(0, Math.round(pixelCrop.x));
+  const y = Math.max(0, Math.round(pixelCrop.y));
+  const width = Math.max(1, Math.min(Math.round(pixelCrop.width), image.naturalWidth - x));
+  const height = Math.max(1, Math.min(Math.round(pixelCrop.height), image.naturalHeight - y));
 
   const canvas = document.createElement("canvas");
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
+  canvas.width = width;
+  canvas.height = height;
 
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas 2D context not available");
 
-  ctx.drawImage(
-    image,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
-    0,
-    0,
-    pixelCrop.width,
-    pixelCrop.height
-  );
+  ctx.drawImage(image, x, y, width, height, 0, 0, width, height);
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(

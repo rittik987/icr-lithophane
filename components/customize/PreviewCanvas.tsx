@@ -1,9 +1,11 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Stage, Layer, Rect, Image as KonvaImage, Text, Group } from "react-konva";
 import type { Stage as StageType } from "konva/lib/Stage";
 import { TemplateConfig, PhotoSlot } from "@/lib/templates";
+import type { SceneObject } from "@/lib/canvasScene";
+import { CANVAS_H, CANVAS_W } from "@/lib/canvasScene";
 
 // ─── Hook: load HTMLImageElement from a File ──────────────
 function useFileImage(file: File | null): HTMLImageElement | null {
@@ -47,12 +49,28 @@ function SlotImage({ slot, file }: { slot: PhotoSlot; file: File | null }) {
 }
 
 // ─── Main canvas component ────────────────────────────────
+function ScenePhotoImage({ obj }: { obj: Extract<SceneObject, { kind: "photo" }> }) {
+  const img = useFileImage(obj.file);
+  if (!img) return null;
+  return (
+    <KonvaImage
+      image={img}
+      x={obj.x}
+      y={obj.y}
+      width={obj.width}
+      height={obj.height}
+      rotation={obj.rotation}
+    />
+  );
+}
+
 interface PreviewCanvasProps {
   template: TemplateConfig;
   uploadedFiles: Record<string, File>;
   textValues: Record<string, string>;
   stageRef: React.RefObject<StageType | null>;
   containerWidth: number;
+  sceneObjects?: SceneObject[];
 }
 
 export default function PreviewCanvas({
@@ -61,7 +79,42 @@ export default function PreviewCanvas({
   textValues,
   stageRef,
   containerWidth,
+  sceneObjects,
 }: PreviewCanvasProps) {
+  if (sceneObjects) {
+    const scale = containerWidth / CANVAS_W;
+    const stageH = CANVAS_H * scale;
+    return (
+      <Stage ref={stageRef} width={containerWidth} height={stageH} scaleX={scale} scaleY={scale}>
+        <Layer>
+          <Rect x={0} y={0} width={CANVAS_W} height={CANVAS_H} fill="#fffdf8" />
+          {sceneObjects
+            .filter((obj): obj is Extract<SceneObject, { kind: "photo" }> => obj.kind === "photo")
+            .map((obj) => (
+              <ScenePhotoImage key={obj.id} obj={obj} />
+            ))}
+          {sceneObjects
+            .filter((obj): obj is Extract<SceneObject, { kind: "text" }> => obj.kind === "text")
+            .map((obj) => (
+              <Text
+                key={obj.id}
+                text={obj.text}
+                x={obj.x}
+                y={obj.y}
+                width={obj.width}
+                fontSize={obj.fontSize}
+                fontFamily={obj.fontFamily || "Georgia, serif"}
+                fontStyle={obj.fontStyle}
+                fill={obj.fill}
+                align={obj.align}
+                rotation={obj.rotation}
+              />
+            ))}
+        </Layer>
+      </Stage>
+    );
+  }
+
   const scale = containerWidth / template.canvasW;
   const stageH = template.canvasH * scale;
 

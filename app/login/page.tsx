@@ -33,7 +33,11 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [gsiReady, setGsiReady] = useState(false);
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+  const [showManual, setShowManual] = useState(
+    () => !googleClientId || searchParams.get("manual") === "1"
+  );
   const googleBtnRef = useRef<HTMLDivElement>(null);
+  const phoneInputRef = useRef<HTMLInputElement>(null);
   const credentialHandlerRef = useRef<((response: { credential: string }) => Promise<void>) | null>(null);
 
   // Auth guard
@@ -168,7 +172,12 @@ function LoginForm() {
 
           <h1 className="font-serif font-bold text-base text-[#2E1E12] tracking-tight">Login</h1>
 
-          <div className="w-12" aria-hidden="true" />
+          <Link
+            href={`/register${redirect && redirect !== "/" ? `?redirect=${encodeURIComponent(redirect)}` : ""}`}
+            className="text-xs font-bold text-[#D96B27] hover:text-[#B85315] transition-colors"
+          >
+            Create account
+          </Link>
         </div>
       </header>
 
@@ -181,24 +190,20 @@ function LoginForm() {
             <h2 className="font-serif text-2xl font-normal text-[#2E1E12] tracking-tight">
               Welcome back
             </h2>
-            <p className="text-xs text-[#7A6759] mt-1 font-sans">
-              Sign in to manage your orders &amp; saved keepsakes
+            <p className="text-xs text-[#7A6759] mt-1.5 font-sans leading-relaxed">
+              Continue with Google — it&apos;s the easiest way. No password to type.
             </p>
           </div>
 
-          {/* Google Sign-In Button — uses renderButton() (official iframe) which always opens
-               the account chooser popup. The old prompt() / One Tap API is silently suppressed
-               in Chrome FedCM mode, causing the "click has no effect" bug. */}
+          {/* Google is the primary action. renderButton() opens the official account chooser. */}
           <div className="relative w-full" id="google-login-btn-wrapper">
-            {/* Actual Google rendered button — always visible but may be hidden by loading overlay */}
             <div
               ref={googleBtnRef}
               id="google-login-btn-container"
               className="w-full overflow-hidden rounded-2xl"
-              style={{ minHeight: 44, opacity: gsiReady ? 1 : 0, transition: "opacity 0.2s" }}
+              style={{ minHeight: 48, opacity: gsiReady ? 1 : 0, transition: "opacity 0.2s" }}
             />
 
-            {/* Loading overlay — shown after account selected while backend verifies */}
             {googleLoading && (
               <div className="absolute inset-0 flex items-center justify-center gap-2.5 rounded-2xl bg-white border border-[#E2D8C9] z-10">
                 <svg className="animate-spin h-4 w-4 text-[#D96B27]" fill="none" viewBox="0 0 24 24">
@@ -209,7 +214,6 @@ function LoginForm() {
               </div>
             )}
 
-            {/* Skeleton while GSI script loads */}
             {!gsiReady && !googleLoading && (
               <div className="absolute inset-0 flex items-center justify-center gap-3 rounded-2xl bg-white border border-[#E2D8C9] animate-pulse">
                 <div className="w-4 h-4 rounded-full bg-[#E2D8C9]" />
@@ -217,18 +221,13 @@ function LoginForm() {
               </div>
             )}
           </div>
+          <p className="mt-2.5 text-center text-[11px] text-[#9A8778]">
+            Uses the Google account already on this phone
+          </p>
 
-          {/* Divider */}
-          <div className="relative my-5 flex items-center justify-center">
-            <div className="w-full border-t border-[#EAE3D6]" />
-            <span className="absolute bg-white px-3 text-[11px] font-medium text-[#9A8778]">
-              or phone number
-            </span>
-          </div>
-
-          {/* Error */}
+          {/* Error — shown for both Google and the optional manual form */}
           {error && (
-            <div className="mb-4 p-3 rounded-xl bg-[#FDF3F2] border border-[#F5C7C3] flex items-center gap-2 text-xs text-[#A82525] animate-in fade-in duration-200">
+            <div className="mt-4 p-3 rounded-xl bg-[#FDF3F2] border border-[#F5C7C3] flex items-center gap-2 text-xs text-[#A82525] animate-in fade-in duration-200">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="12" />
@@ -238,8 +237,42 @@ function LoginForm() {
             </div>
           )}
 
-          {/* Phone + Password Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="relative my-5 flex items-center justify-center">
+            <div className="w-full border-t border-[#EAE3D6]" />
+            <span className="absolute bg-white px-3 text-[11px] font-medium text-[#9A8778]">
+              or
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              const next = !showManual;
+              setShowManual(next);
+              if (next) {
+                window.setTimeout(() => phoneInputRef.current?.focus(), 50);
+              }
+            }}
+            className="w-full py-2.5 text-xs font-semibold text-[#6E5C50] hover:text-[#2E1E12] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            aria-expanded={showManual}
+          >
+            <span>{showManual ? "Hide mobile number form" : "Use mobile number instead"}</span>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              className={`transition-transform ${showManual ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+
+          {/* Phone + Password Form — optional, collapsed by default */}
+          <form onSubmit={handleSubmit} className={`space-y-4 ${showManual ? "mt-4" : "hidden"}`}>
             {/* Phone */}
             <div>
               <label htmlFor="phone-input" className="block text-[11px] font-bold text-[#6E5C50] uppercase tracking-wider mb-1.5">
@@ -251,13 +284,14 @@ function LoginForm() {
                 </span>
                 <input
                   id="phone-input"
+                  ref={phoneInputRef}
                   type="tel"
                   inputMode="numeric"
                   autoComplete="tel-national"
                   value={phone}
                   onChange={handlePhoneChange}
                   placeholder="Enter 10-digit mobile number"
-                  required
+                  required={showManual}
                   className="w-full px-3 py-3 text-sm font-medium text-[#2E1E12] placeholder-[#B8A798] bg-transparent outline-none tracking-wide"
                 />
               </div>
@@ -284,7 +318,7 @@ function LoginForm() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
-                  required
+                  required={showManual}
                   className="w-full px-3.5 py-3 pr-11 text-sm font-medium text-[#2E1E12] placeholder-[#B8A798] bg-transparent outline-none"
                 />
                 <button

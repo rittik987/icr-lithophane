@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { TemplateConfig } from "./templates";
-import { fileToCompressedDataUrl, generateLithophanePreview } from "./exportPreview";
+import { fileToCompressedDataUrl, generateLithophanePreview, generateScenePreview } from "./exportPreview";
 import { cartApi, uploadApi, getStoredToken, productApi } from "./api";
+import type { SceneObject } from "./canvasScene";
 
 export const CART_STORAGE_KEY = "icr_lithophane_cart";
 export const CART_EVENT_NAME = "icr_cart_updated";
@@ -64,7 +65,8 @@ export async function buildCartItemPayload(
   uploadedFiles: Record<string, File>,
   textValues: Record<string, string>,
   customPreviewDataUrl?: string,
-  prices?: { sellingPrice?: number; mrp?: number }
+  prices?: { sellingPrice?: number; mrp?: number },
+  sceneObjects?: SceneObject[]
 ): Promise<Omit<CartItem, "id" | "createdAt">> {
   // Dynamically resolve pricing
   let itemPrice = prices?.sellingPrice;
@@ -92,19 +94,19 @@ export async function buildCartItemPayload(
   // 1. Generate composite preview if not provided
   let preview = customPreviewDataUrl;
   if (!preview) {
-    preview = await generateLithophanePreview(template, uploadedFiles, textValues);
+    preview = sceneObjects?.length
+      ? await generateScenePreview(sceneObjects)
+      : await generateLithophanePreview(template, uploadedFiles, textValues);
   }
 
   // 2. Prepare files to upload to Cloudinary
   const filesToUpload: File[] = [];
+  const photoEntries = Object.entries(uploadedFiles);
 
-  for (const slot of template.photoSlots) {
-    const file = uploadedFiles[slot.id];
-    if (file) {
-      const safeName = `${slot.id}___${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-      const prefixedFile = new File([file], safeName, { type: file.type });
-      filesToUpload.push(prefixedFile);
-    }
+  for (const [slotId, file] of photoEntries) {
+    const safeName = `${slotId}___${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+    const prefixedFile = new File([file], safeName, { type: file.type });
+    filesToUpload.push(prefixedFile);
   }
 
   // Convert composite preview dataUrl to a File as well
@@ -133,36 +135,49 @@ export async function buildCartItemPayload(
     previewCloudinaryUrl = previewAsset.url;
   }
 
-  // 4. Build photo slots
+  // 4. Build photo slots from whatever the customer placed on the canvas
   const photos: Record<string, CartPhotoSlot> = {};
-  for (const slot of template.photoSlots) {
-    const file = uploadedFiles[slot.id];
-    if (file) {
-      const asset = uploadedAssets.find((a) => a.name.startsWith(`${slot.id}___`));
-      const dataUrl = await fileToCompressedDataUrl(file, 900, 0.85);
+  let photoIndex = 0;
+  for (const [slotId, file] of photoEntries) {
+    photoIndex += 1;
+    const templateSlot = template.photoSlots.find((s) => s.id === slotId);
+    const asset = uploadedAssets.find((a) => a.name.startsWith(`${slotId}___`));
+    const dataUrl = await fileToCompressedDataUrl(file, 900, 0.85);
 
-      photos[slot.id] = {
-        slotId: slot.id,
-        slotLabel: slot.label,
-        dataUrl,
-        cloudinaryId: asset?.id,
-        url: asset?.url || dataUrl,
-        fileName: file.name,
-        aspectHint: slot.aspectHint,
-        cmLabel: slot.cmLabel,
-      };
-    }
+    photos[slotId] = {
+      slotId,
+      slotLabel: templateSlot?.label || `Photo ${photoIndex}`,
+      dataUrl,
+      cloudinaryId: asset?.id,
+      url: asset?.url || dataUrl,
+      fileName: file.name,
+      aspectHint: templateSlot?.aspectHint || "Freeform canvas",
+      cmLabel: templateSlot?.cmLabel || "20 × 15 cm canvas",
+    };
   }
 
-  // 5. Assemble dynamic text fields
+  // 5. Assemble text fields from canvas text (or leftover template fields)
   const texts: Record<string, CartTextField> = {};
-  for (const field of template.textFields) {
-    const val = textValues[field.id] ?? field.defaultValue;
-    texts[field.id] = {
-      fieldId: field.id,
-      label: field.label,
-      value: val,
-    };
+  const textEntries = Object.entries(textValues);
+  if (textEntries.length > 0) {
+    let textIndex = 0;
+    for (const [fieldId, val] of textEntries) {
+      textIndex += 1;
+      const templateField = template.textFields.find((f) => f.id === fieldId);
+      texts[fieldId] = {
+        fieldId,
+        label: templateField?.label || `Text ${textIndex}`,
+        value: val,
+      };
+    }
+  } else {
+    for (const field of template.textFields) {
+      texts[field.id] = {
+        fieldId: field.id,
+        label: field.label,
+        value: field.defaultValue,
+      };
+    }
   }
 
   return {
