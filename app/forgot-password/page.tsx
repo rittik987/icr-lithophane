@@ -364,7 +364,7 @@ function ForgotPasswordForm() {
               </div>
               <h2 className="font-serif text-xl font-normal text-[#2E1E12] tracking-tight">Password updated!</h2>
               <p className="text-xs text-[#7A6759] mt-2 leading-relaxed">Your password has been reset successfully.<br />You can now sign in with your new password.</p>
-              <button type="button" onClick={() => router.push("/login")} className={`mt-6 ${submitCls}`}>Sign In Now</button>
+              <button type="button" onClick={() => router.push("/login?manual=1")} className={`mt-6 ${submitCls}`}>Sign In Now</button>
             </div>
           )}
         </div>

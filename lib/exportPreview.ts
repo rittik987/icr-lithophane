@@ -1,4 +1,6 @@
 import { TemplateConfig } from "./templates";
+import type { SceneObject } from "./canvasScene";
+import { CANVAS_H, CANVAS_W } from "./canvasScene";
 
 /**
  * Loads an HTMLImageElement from a File or data URL safely without CORS issues.
@@ -249,5 +251,58 @@ export async function generateLithophanePreview(
   ctx.strokeRect(0, 0, template.canvasW, template.canvasH);
 
   // Return crisp, compressed JPEG data URL (~120KB)
+  return canvas.toDataURL("image/jpeg", 0.9);
+}
+
+/**
+ * Export a freeform canvas scene to the lithophane 20×15cm (800×600) JPEG.
+ */
+export async function generateScenePreview(objects: SceneObject[]): Promise<string> {
+  const canvas = document.createElement("canvas");
+  canvas.width = CANVAS_W;
+  canvas.height = CANVAS_H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas context not supported");
+
+  ctx.fillStyle = "#fffdf8";
+  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+  const drawOrder = [
+    ...objects.filter((o) => o.kind === "photo"),
+    ...objects.filter((o) => o.kind === "text"),
+  ];
+
+  for (const obj of drawOrder) {
+    if (obj.kind === "photo") {
+      const objectUrl = URL.createObjectURL(obj.file);
+      try {
+        const img = await loadImageSource(objectUrl);
+        ctx.save();
+        ctx.translate(obj.x, obj.y);
+        ctx.rotate((obj.rotation * Math.PI) / 180);
+        ctx.drawImage(img, 0, 0, obj.width, obj.height);
+        ctx.restore();
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+      continue;
+    }
+
+    if (!obj.text.trim()) continue;
+    ctx.save();
+    ctx.translate(obj.x, obj.y);
+    ctx.rotate((obj.rotation * Math.PI) / 180);
+    const stylePrefix = obj.fontStyle ? `${obj.fontStyle} ` : "";
+    const family = obj.fontFamily || "'Playfair Display', Georgia, serif";
+    ctx.font = `${stylePrefix}${obj.fontSize}px ${family}`;
+    ctx.fillStyle = obj.fill;
+    ctx.textAlign = obj.align;
+    ctx.textBaseline = "top";
+    const textX =
+      obj.align === "center" ? obj.width / 2 : obj.align === "right" ? obj.width : 0;
+    ctx.fillText(obj.text, textX, 0, obj.width);
+    ctx.restore();
+  }
+
   return canvas.toDataURL("image/jpeg", 0.9);
 }
