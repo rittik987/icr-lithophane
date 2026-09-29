@@ -132,7 +132,7 @@ export default function PreviewModal({
                   : "bg-white border border-[#e5ddd0] text-[#6e5c50]"
               }`}
             >
-              White Light
+              Light Off
             </button>
             <button
               type="button"
@@ -143,7 +143,7 @@ export default function PreviewModal({
                   : "bg-white border border-[#e5ddd0] text-[#6e5c50]"
               }`}
             >
-              Warm Light
+              Light On
             </button>
           </div>
 

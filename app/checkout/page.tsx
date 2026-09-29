@@ -15,6 +15,7 @@ import {
   userApi,
   Address,
   CouponValidation,
+  AvailableCoupon,
 } from "@/lib/api";
 import CouponDrawer from "@/components/cart/CouponDrawer";
 import CustomSelect from "@/components/CustomSelect";
@@ -172,6 +173,7 @@ function CheckoutContent() {
   const [promoError, setPromoError] = useState("");
   const [isCouponDrawerOpen, setIsCouponDrawerOpen] = useState(false);
   const [availableCouponsCount, setAvailableCouponsCount] = useState<number | null>(null);
+  const [welcomeCoupon, setWelcomeCoupon] = useState<AvailableCoupon | null>(null);
   // Track when user explicitly removes a coupon to prevent auto-reapply
   const userRemovedCouponRef = useRef(false);
 
@@ -245,7 +247,16 @@ function CheckoutContent() {
       .listAvailable()
       .then((res) => {
         if (res.success && res.data?.coupons) {
-          setAvailableCouponsCount(res.data.coupons.length);
+          // Separate WELCOME* coupons for the dedicated banner
+          const welcome = res.data.coupons.find(
+            (c) => c.code.toUpperCase().startsWith("WELCOME") && !c.isUsedByUser
+          );
+          if (welcome) setWelcomeCoupon(welcome);
+          // Filter out WELCOME* coupons from the drawer count
+          const filtered = res.data.coupons.filter(
+            (c) => !c.code.toUpperCase().startsWith("WELCOME")
+          );
+          setAvailableCouponsCount(filtered.length);
         }
       })
       .catch(() => {});
@@ -1525,6 +1536,65 @@ function CheckoutContent() {
                   </div>
                 ))}
               </div>
+
+              {/* NEW CUSTOMER OFFER — Welcome coupon promotional banner */}
+              {welcomeCoupon && !appliedPromo && (
+                <div className="mb-4 pb-4 border-b border-[#f2ebdc]">
+                  <div className="bg-[#fff8f2] border border-[#f5dbca] rounded-lg overflow-hidden">
+                    <div className="flex items-start gap-3 px-3.5 py-3">
+                      {/* Gift icon */}
+                      <div className="w-9 h-9 rounded-lg bg-[#e07a28] text-white flex items-center justify-center shrink-0 mt-0.5">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 12 20 22 4 22 4 12" />
+                          <rect x="2" y="7" width="20" height="5" />
+                          <path d="M12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+                        </svg>
+                      </div>
+
+                      {/* Offer text */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#e07a28] font-sans leading-tight">
+                          New Customer Offer
+                        </p>
+                        <p className="text-[13px] font-semibold text-[#2e1e12] font-sans mt-0.5">
+                          Get <span className="font-bold">₹{Math.round(welcomeCoupon.discountValue / 100).toLocaleString("en-IN")} OFF</span> your order
+                        </p>
+                        <p className="text-[11px] text-[#6e5c50] font-sans mt-0.5">
+                          Use code <span className="font-mono font-bold text-[#2e1e12] uppercase">{welcomeCoupon.code}</span>
+                        </p>
+
+                        {/* Discounted price preview */}
+                        <div className="mt-2">
+                          <p className="text-[11px] text-[#6e5c50] font-sans">Your price with this coupon</p>
+                          <div className="flex items-baseline gap-2 mt-0.5">
+                            <span className="text-base font-bold text-[#e07a28] font-sans">
+                              ₹{Math.max(0, subtotal - Math.round(welcomeCoupon.discountValue / 100)).toLocaleString("en-IN")}
+                            </span>
+                            <span className="text-xs text-[#8c7b6d] line-through font-sans">
+                              ₹{subtotal.toLocaleString("en-IN")}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Save badge + Apply button (stacked) */}
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <span className="text-[11px] font-bold text-[#1e7234] bg-[#eaf5ec] border border-[#c6e6ca] px-2 py-0.5 rounded-sm">
+                          Save ₹{Math.round(welcomeCoupon.discountValue / 100).toLocaleString("en-IN")}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={promoLoading}
+                          onClick={() => applyCouponCode(welcomeCoupon.code)}
+                          className="px-3 py-1.5 rounded-md text-xs font-bold font-sans bg-[#e07a28] hover:bg-[#c96a1f] text-white shadow-sm active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                        >
+                          {promoLoading ? "Applying..." : "Apply Coupon"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Promo Code Section */}
               <div className="mb-4 pb-4 border-b border-[#f2ebdc]">
