@@ -43,7 +43,11 @@ export default function CouponDrawer({
       .listAvailable()
       .then((res) => {
         if (isMounted && res.success && res.data?.coupons) {
-          setCoupons(res.data.coupons);
+          // Filter out WELCOME* coupons — they are homepage-only promotional offers
+          const filtered = res.data.coupons.filter(
+            (c) => !c.code.toUpperCase().startsWith("WELCOME")
+          );
+          setCoupons(filtered);
         }
       })
       .catch((err) => {

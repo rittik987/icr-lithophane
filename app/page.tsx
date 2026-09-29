@@ -11,6 +11,7 @@ import PhotoToLithophane from "@/components/PhotoToLithophane";
 import EveryDetailMatters from "@/components/EveryDetailMatters";
 import KeepsakeOccasions from "@/components/KeepsakeOccasions";
 import FaqSection from "@/components/FaqSection";
+import CouponOfferBanner from "@/components/CouponOfferBanner";
 import { productApi } from "@/lib/api";
 import { adaptProductMediaToSlides } from "@/lib/slides";
 
@@ -284,6 +285,9 @@ export default async function HomePage() {
                 <div id="razorpay-widget-slot-mobile" className="w-full min-h-[36px]" />
               )}
 
+              {/* Coupon Offer Banner — NEW CUSTOMER OFFER + HAVE A COUPON? */}
+              <CouponOfferBanner />
+
               {/* CTA button */}
               <CtaButton
                 label="Customize & Place Order"
@@ -376,6 +380,9 @@ export default async function HomePage() {
                 {RAZORPAY_KEY && (
                   <div id="razorpay-widget-slot-desktop" className="w-full min-h-[36px]" />
                 )}
+
+                {/* Coupon Offer Banner — NEW CUSTOMER OFFER + HAVE A COUPON? */}
+                <CouponOfferBanner />
 
                 {/* CTA button */}
                 <CtaButton
